@@ -1,5 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from ..config.database import SessionLocal
+from ..models.user import User
+import bcrypt
+from fastapi import APIRouter, Depends
 
 router = APIRouter()
 
@@ -7,8 +12,17 @@ class LoginData(BaseModel):
     email: str
     password: str
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @router.post("/login")
-async def login(login_data: LoginData):
-    if login_data.email == "user@example.com" and login_data.password == "senha123":
+async def login(login_data: LoginData, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == login_data.email).first()
+    if user and user.verify_password(login_data.password):
         return {"status": "success"}
-    raise HTTPException(status_code=401, detail="Unauthorized")
+    else:
+        raise HTTPException(status_code=401, detail="Unauthorized")
