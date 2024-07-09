@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, Field, field_validator, EmailStr, validator
 from typing import Optional
 import phonenumbers
 import re
@@ -78,7 +78,7 @@ class UserInDBBase(UserBase):
     user_type_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class User(UserInDBBase):
     pass

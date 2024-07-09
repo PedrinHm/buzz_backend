@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from dotenv import load_dotenv
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session
 import os
+from dotenv import load_dotenv
+from .models.user_type import UserType, UserTypeNames
+from .routers import auth, users, buses, bus_stops
+from .models import User, Bus
 
 load_dotenv()
 
@@ -16,16 +21,12 @@ from app.config.database import Base
 
 # Importar modelos
 from app.models.user import User
-from app.models.user_type import UserType, UserTypeNames
-from app.models.bus import Bus
-from app.models.bus_stop import BusStop
-
-# Importar roteadores
-from app.routers import auth, users, buses, bus_stops
+from app.models.user_type import UserType
 
 app = FastAPI()
 
 # Incluir roteadores
+from app.routers import auth, users
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(buses.router)
@@ -43,14 +44,10 @@ def create_user_types(session: Session):
         ]
         session.add_all(user_types)
         session.commit()
-
+        
 @app.on_event("startup")
 async def startup_event():
     create_tables()  
     with SessionLocal() as session:
-        create_user_types(session)
+        create_user_types(session)  
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    db = SessionLocal()
-    db.close()
