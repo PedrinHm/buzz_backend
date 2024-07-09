@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from ..config.database import Base
 from datetime import datetime
 import bcrypt
@@ -6,15 +6,22 @@ import bcrypt
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    login = Column(String, unique=True, index=True)
+    password = Column(String)
+    name = Column(String)
+    email = Column(String, unique=True)
+    cpf = Column(String, unique=True)
+    phone = Column(String, unique=True)  # Certifique-se de que phone é único
+    user_type_id = Column(Integer, ForeignKey('user_types.id'))
+    system_deleted = Column(String)
+    update_date = Column(DateTime)
+    create_date = Column(DateTime, default=datetime.utcnow)
+    first_login = Column(String)
 
     def verify_password(self, password):
-        if not password or not self.hashed_password:
+        if not password or not self.password:
             return False
-        return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
+        return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
 
     def set_password(self, password):
-        self.hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
+        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
