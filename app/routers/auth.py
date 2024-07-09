@@ -6,7 +6,10 @@ from ..models.user import User
 import bcrypt
 from fastapi import APIRouter, Depends
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"]
+)
 
 class LoginData(BaseModel):
     email: str
@@ -19,7 +22,7 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/login")
+@router.post("/")
 async def login(login_data: LoginData, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == login_data.email).first()
     if user and user.verify_password(login_data.password):
