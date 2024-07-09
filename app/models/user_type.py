@@ -12,6 +12,6 @@ class UserType(Base):
     __tablename__ = 'user_types'
     id = Column(Integer, primary_key=True, index=True)
     description = Column(Enum(UserTypeNames))
-    system_deleted = Column(String)
-    update_date = Column(DateTime)
+    system_deleted = Column(Integer, default=0)  # Valor padrão 0
+    update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Data de criação padrão, atualiza na modificação
     create_date = Column(DateTime, default=datetime.utcnow)

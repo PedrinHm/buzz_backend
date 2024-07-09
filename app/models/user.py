@@ -11,12 +11,12 @@ class User(Base):
     name = Column(String)
     email = Column(String, unique=True)
     cpf = Column(String, unique=True)
-    phone = Column(String, unique=True)  # Certifique-se de que phone é único
+    phone = Column(String, unique=True)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
-    system_deleted = Column(String)
-    update_date = Column(DateTime)
+    system_deleted = Column(String, default="0")
+    update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
-    first_login = Column(String)
+    first_login = Column(String, default="true")
 
     def verify_password(self, password):
         if not password or not self.password:
