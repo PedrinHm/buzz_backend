@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 from .models.user_type import UserType, UserTypeNames
+from .routers import auth, users, buses  # Adicione o import das rotas de ônibus
+from .models import User, Bus  # Certifique-se de que o modelo Bus está sendo importado
 
 load_dotenv()
 
@@ -27,6 +29,7 @@ app = FastAPI()
 from app.routers import auth, users
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(buses.router)
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
