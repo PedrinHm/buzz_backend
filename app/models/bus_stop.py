@@ -6,7 +6,7 @@ class BusStop(Base):
     __tablename__ = 'bus_stops'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-    faculdade = Column(String)
+    university  = Column(String)
     system_deleted = Column(String, default="0")
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)

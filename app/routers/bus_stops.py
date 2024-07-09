@@ -19,7 +19,7 @@ def create_bus_stop(bus_stop: schemas.BusStopCreate, db: Session = Depends(get_d
     
     new_bus_stop = BusStopModel(
         name=bus_stop.name,
-        faculdade=bus_stop.faculdade,
+        university =bus_stop.university ,
         system_deleted="0"
     )
     db.add(new_bus_stop)
