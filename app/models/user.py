@@ -6,6 +6,7 @@ import bcrypt
 
 class User(Base):
     __tablename__ = 'users'
+    
     id = Column(Integer, primary_key=True, index=True)
     login = Column(String, unique=True, index=True)
     password = Column(String)
@@ -14,11 +15,12 @@ class User(Base):
     cpf = Column(String, unique=True)
     phone = Column(String, unique=True)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
-    system_deleted = Column(String, default="0")
-    update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    create_date = Column(DateTime, default=datetime.utcnow)
     first_login = Column(String, default="true")
 
+    system_deleted = Column(Integer, default=0)
+    update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    create_date = Column(DateTime, default=datetime.utcnow)
+    
     trips = relationship("Trip", back_populates="driver")
     student_trips = relationship("StudentTrip", back_populates="student")
 

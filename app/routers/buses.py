@@ -17,7 +17,7 @@ def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
     db_bus = db.query(BusModel).filter(
         (BusModel.registration_number == bus.registration_number) |
         (BusModel.name == bus.name) &
-        (BusModel.system_deleted == "0")
+        (BusModel.system_deleted == 0)
     ).first()
     if db_bus:
         if db_bus.registration_number == bus.registration_number:
@@ -38,25 +38,25 @@ def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[schemas.Bus])
 def read_buses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    buses = db.query(BusModel).filter(BusModel.system_deleted == "0").offset(skip).limit(limit).all()
+    buses = db.query(BusModel).filter(BusModel.system_deleted == 0).offset(skip).limit(limit).all()
     return buses
 
 @router.get("/{bus_id}", response_model=schemas.Bus)
 def read_bus(bus_id: int, db: Session = Depends(get_db)):
-    bus = db.query(BusModel).filter(BusModel.id == bus_id, BusModel.system_deleted == "0").first()
+    bus = db.query(BusModel).filter(BusModel.id == bus_id, BusModel.system_deleted == 0).first()
     if bus is None:
         raise HTTPException(status_code=404, detail="Bus not found")
     return bus
 
 @router.put("/{bus_id}", response_model=schemas.Bus)
 def update_bus(bus_id: int, bus: schemas.BusUpdate, db: Session = Depends(get_db)):
-    db_bus = db.query(BusModel).filter(BusModel.id == bus_id, BusModel.system_deleted == "0").first()
+    db_bus = db.query(BusModel).filter(BusModel.id == bus_id, BusModel.system_deleted == 0).first()
     if not db_bus:
         raise HTTPException(status_code=404, detail="Bus not found")
 
     # Verifica se o novo nome já está registrado
     if bus.name and bus.name != db_bus.name:
-        existing_bus = db.query(BusModel).filter(BusModel.name == bus.name, BusModel.system_deleted == "0").first()
+        existing_bus = db.query(BusModel).filter(BusModel.name == bus.name, BusModel.system_deleted == 0).first()
         if existing_bus:
             raise HTTPException(status_code=400, detail="Bus name already registered")
 

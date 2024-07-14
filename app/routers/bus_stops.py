@@ -29,12 +29,12 @@ def create_bus_stop(bus_stop: schemas.BusStopCreate, db: Session = Depends(get_d
 
 @router.get("/", response_model=List[schemas.BusStop])
 def read_bus_stops(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    bus_stops = db.query(BusStopModel).filter(BusStopModel.system_deleted == "0").offset(skip).limit(limit).all()
+    bus_stops = db.query(BusStopModel).filter(BusStopModel.system_deleted == 0).offset(skip).limit(limit).all()
     return bus_stops
 
 @router.get("/{bus_stop_id}", response_model=schemas.BusStop)
 def read_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
-    bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id, BusStopModel.system_deleted == "0").first()
+    bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id, BusStopModel.system_deleted == 0).first()
     if bus_stop is None:
         raise HTTPException(status_code=404, detail="Bus stop not found")
     return bus_stop

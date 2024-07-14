@@ -15,7 +15,7 @@ class BusStopUpdate(BaseModel):
 
 class BusStop(BusStopBase):
     id: int
-    system_deleted: str
+    system_deleted: int
     update_date: datetime
     create_date: datetime
 

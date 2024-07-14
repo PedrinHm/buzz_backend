@@ -27,7 +27,7 @@ class BusInDBBase(BusBase):
     registration_number: str
     name: str
     capacity: int
-    system_deleted: str
+    system_deleted: int
 
     class Config:
         from_attributes = True

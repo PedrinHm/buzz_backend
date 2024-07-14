@@ -11,10 +11,10 @@ class StudentTrip(Base):
     status = Column(Integer, nullable=False)
     point_id = Column(Integer, ForeignKey('bus_stops.id'), nullable=False)
     
-    trip = relationship("Trip", back_populates="student_trips")
-    student = relationship("User", back_populates="student_trips")
-    point = relationship("BusStop", back_populates="student_trips")
-    
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
+
+    trip = relationship("Trip", back_populates="student_trips")
+    student = relationship("User", back_populates="student_trips")
+    point = relationship("BusStop", back_populates="student_trips")

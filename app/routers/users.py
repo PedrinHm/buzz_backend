@@ -18,7 +18,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         ((UserModel.email == user.email) | 
          (UserModel.phone == user.phone) | 
          (UserModel.cpf == user.cpf)) & 
-         (UserModel.system_deleted == "0")
+         (UserModel.system_deleted == 0)
     ).first()
     if db_user:
         if db_user.email == user.email:
@@ -46,19 +46,19 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = db.query(UserModel).filter(UserModel.system_deleted == "0").offset(skip).limit(limit).all()
+    users = db.query(UserModel).filter(UserModel.system_deleted == 0).offset(skip).limit(limit).all()
     return users
 
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == "0").first()
+    user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(get_db)):
-    db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == "0").first()
+    db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     for var, value in vars(user).items():
@@ -75,6 +75,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    db_user.system_deleted = "1"
+    db_user.system_deleted = 1
     db.commit()
     return {"ok": True}

@@ -5,3 +5,4 @@ class StudentStatusEnum(IntEnum):
     PRESENTE = 2
     AGUARDANDO = 3
     NAO_VOLTARA = 4
+    FILA_ESPERA = 5

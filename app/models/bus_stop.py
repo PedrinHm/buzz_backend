@@ -8,8 +8,9 @@ class BusStop(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     university  = Column(String)
-    student_trips = relationship("StudentTrip", back_populates="point")
-
-    system_deleted = Column(String, default="0")
+    
+    system_deleted = Column(Integer, default=0) 
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
+
+    student_trips = relationship("StudentTrip", back_populates="point")

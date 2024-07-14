@@ -20,10 +20,10 @@ class Trip(Base):
     bus_id = Column(Integer, ForeignKey('buses.id'), nullable=False)
     driver_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     
-    bus = relationship("Bus", back_populates="trips")
-    driver = relationship("User", back_populates="trips")
-    student_trips = relationship("StudentTrip", back_populates="trip")
-    
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
+
+    bus = relationship("Bus", back_populates="trips")
+    driver = relationship("User", back_populates="trips")
+    student_trips = relationship("StudentTrip", back_populates="trip")
