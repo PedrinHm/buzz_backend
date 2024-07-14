@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 from .models.user_type import UserType, UserTypeNames
-from .routers import auth, users, buses, bus_stops
-from .models import User, Bus
+from .models import bus, user, trip, student_trip, student_status_enum
+from .routers import users, buses, bus_stops, auth, trips, student_trips
+
+
 
 load_dotenv()
 
@@ -25,12 +27,13 @@ from app.models.user_type import UserType
 
 app = FastAPI()
 
-# Incluir roteadores
-from app.routers import auth, users
+
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(buses.router)
 app.include_router(bus_stops.router)
+app.include_router(trips.router)
+app.include_router(student_trips.router)
 
 def create_tables():
     Base.metadata.create_all(bind=engine)

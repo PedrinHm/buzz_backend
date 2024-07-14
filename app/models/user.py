@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from ..config.database import Base
 from datetime import datetime
 import bcrypt
@@ -17,6 +18,9 @@ class User(Base):
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
     first_login = Column(String, default="true")
+
+    trips = relationship("Trip", back_populates="driver")
+    student_trips = relationship("StudentTrip", back_populates="student")
 
     def verify_password(self, password):
         if not password or not self.password:
