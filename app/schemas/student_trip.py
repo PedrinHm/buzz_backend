@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from ..models.student_status_enum import StudentStatusEnum
+from ..models.student_trip import StudentStatusEnum
 
 class StudentTripBase(BaseModel):
     trip_id: int

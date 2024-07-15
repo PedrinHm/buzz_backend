@@ -6,9 +6,8 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 from .models.user_type import UserType, UserTypeNames
-from .models import bus, user, trip, student_trip, student_status_enum
-from .routers import users, buses, bus_stops, auth, trips, student_trips
-
+from .routers import users, buses, bus_stops, auth, trips, student_trips, trip_bus_stops
+from .models import bus, user, trip, student_trip, trip_bus_stop
 
 
 load_dotenv()
@@ -34,6 +33,7 @@ app.include_router(buses.router)
 app.include_router(bus_stops.router)
 app.include_router(trips.router)
 app.include_router(student_trips.router)
+app.include_router(trip_bus_stops.router)
 
 def create_tables():
     Base.metadata.create_all(bind=engine)

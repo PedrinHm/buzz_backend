@@ -1,3 +1,4 @@
+# app/models/bus_stop.py
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from ..config.database import Base
@@ -13,4 +14,5 @@ class BusStop(Base):
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
 
-    student_trips = relationship("StudentTrip", back_populates="point")
+    student_trips = relationship("StudentTrip", back_populates="bus_stop")
+    trip_bus_stops = relationship("TripBusStop", back_populates="bus_stop")

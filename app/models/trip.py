@@ -1,3 +1,4 @@
+# app/models/trip.py
 from sqlalchemy import Column, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ..config.database import Base
@@ -27,3 +28,4 @@ class Trip(Base):
     bus = relationship("Bus", back_populates="trips")
     driver = relationship("User", back_populates="trips")
     student_trips = relationship("StudentTrip", back_populates="trip")
+    trip_bus_stops = relationship("TripBusStop", back_populates="trip")
