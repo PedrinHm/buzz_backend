@@ -111,3 +111,27 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
     trip.system_deleted = int(True)
     db.commit()
     return {"status": "deleted"}
+
+@router.put("/{trip_id}/finalizar_volta", response_model=Trip)
+def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.trip_type != TripTypeEnum.VOLTA:
+        raise HTTPException(status_code=400, detail="Trip is not a return trip")
+
+    if trip.status != TripStatusEnum.ATIVA:
+        raise HTTPException(status_code=400, detail="Trip is not active")
+
+    # Verificar se todos os pontos de ônibus têm o status JA_PASSOU
+    bus_stops = db.query(TripBusStopModel).filter(TripBusStopModel.trip_id == trip_id).all()
+    for bus_stop in bus_stops:
+        if bus_stop.status != TripBusStopStatusEnum.JA_PASSOU:
+            raise HTTPException(status_code=400, detail="Not all bus stops have passed")
+
+    # Finalizar a viagem de volta
+    trip.status = TripStatusEnum.CONCLUIDA
+    db.commit()
+    db.refresh(trip)
+    return trip
