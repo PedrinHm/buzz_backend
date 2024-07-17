@@ -22,7 +22,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:yeGcwKShGsmPaFTMjUinpdThoLpscewa@monorail.proxy.rlwy.net:20221/railway
+      DATABASE_URL: postgresql://postgres:aQOzrwOxriMNkvDseUMmFWDvBNyjXpnB@viaduct.proxy.rlwy.net:10938/railway
 
     steps:
     - name: Checkout code
