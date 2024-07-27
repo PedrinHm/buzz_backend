@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from .models.user_type import UserType, UserTypeNames
 from .routers import users, buses, bus_stops, auth, trips, student_trips, trip_bus_stops
 from .models import bus, user, trip, student_trip, trip_bus_stop
-
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -25,6 +25,14 @@ from app.models.user import User
 from app.models.user_type import UserType
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite qualquer origem
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos (GET, POST, etc)
+    allow_headers=["*"],  # Permite todos os cabeçalhos
+)
 
 
 app.include_router(auth.router)

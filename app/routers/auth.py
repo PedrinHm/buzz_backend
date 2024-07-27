@@ -15,6 +15,10 @@ class LoginData(BaseModel):
     email: str
     password: str
 
+class LoginResponse(BaseModel):
+    status: str
+    user_type_id: int
+
 def get_db():
     db = SessionLocal()
     try:
@@ -22,10 +26,17 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/")
+@router.post("/", response_model=LoginResponse)
 async def login(login_data: LoginData, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == login_data.email).first()
-    if user and user.verify_password(login_data.password):
-        return {"status": "success"}
+    if user:
+        print(f"Usuário encontrado: {user.email}")
+        if user.verify_password(login_data.password):
+            print(f"Senha verificada com sucesso para o usuário: {user.email}")
+            return {"status": "success", "user_type_id": user.user_type_id}
+        else:
+            print(f"Falha na verificação da senha para o usuário: {user.email}")
     else:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        print("Usuário não encontrado")
+    raise HTTPException(status_code=401, detail="Unauthorized")
+
