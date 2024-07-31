@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 from .models.user_type import UserType, UserTypeNames
-from .routers import users, buses, bus_stops, auth, trips, student_trips, trip_bus_stops
+from .routers import users, buses, bus_stops, auth, trips, student_trips, trip_bus_stops, faculty
 from .models import bus, user, trip, student_trip, trip_bus_stop
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -42,6 +42,7 @@ app.include_router(bus_stops.router)
 app.include_router(trips.router)
 app.include_router(student_trips.router)
 app.include_router(trip_bus_stops.router)
+app.include_router(faculty.router)
 
 def create_tables():
     Base.metadata.create_all(bind=engine)

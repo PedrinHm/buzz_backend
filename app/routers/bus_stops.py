@@ -19,8 +19,8 @@ def create_bus_stop(bus_stop: schemas.BusStopCreate, db: Session = Depends(get_d
     
     new_bus_stop = BusStopModel(
         name=bus_stop.name,
-        university =bus_stop.university ,
-        system_deleted="0"
+        faculty_id=bus_stop.faculty_id,
+        system_deleted=0
     )
     db.add(new_bus_stop)
     db.commit()
@@ -56,6 +56,6 @@ def delete_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
     db_bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id).first()
     if not db_bus_stop:
         raise HTTPException(status_code=404, detail="Bus stop not found")
-    db_bus_stop.system_deleted = "1"
+    db_bus_stop.system_deleted = 1
     db.commit()
     return {"ok": True}

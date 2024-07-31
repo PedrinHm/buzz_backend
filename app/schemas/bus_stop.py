@@ -4,14 +4,14 @@ from typing import Optional
 
 class BusStopBase(BaseModel):
     name: str
-    university : str
+    faculty_id: int
 
 class BusStopCreate(BusStopBase):
     pass
 
 class BusStopUpdate(BaseModel):
     name: Optional[str] = None
-    university : Optional[str] = None
+    faculty_id: int
 
 class BusStop(BusStopBase):
     id: int
