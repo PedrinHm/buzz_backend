@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..config.database import SessionLocal
 from ..models.user import User
 import bcrypt
-from fastapi import APIRouter, Depends
+from datetime import datetime, timedelta
 
 router = APIRouter(
     prefix="/auth",
@@ -26,17 +26,30 @@ def get_db():
     finally:
         db.close()
 
+# Dicionário para armazenar tentativas de login
+login_attempts = {}
+
 @router.post("/", response_model=LoginResponse)
 async def login(login_data: LoginData, db: Session = Depends(get_db)):
+    email = login_data.email
+    now = datetime.utcnow()
+    attempt_window = timedelta(minutes=10)
+    max_attempts = 5
+
+    # Limpar tentativas antigas
+    login_attempts[email] = [ts for ts in login_attempts.get(email, []) if now - ts < attempt_window]
+
+    if len(login_attempts.get(email, [])) >= max_attempts:
+        raise HTTPException(status_code=403, detail="Too many login attempts. Please try again in 15 minutes.")
+
     user = db.query(User).filter(User.email == login_data.email).first()
     if user:
-        print(f"Usuário encontrado: {user.email}")
         if user.verify_password(login_data.password):
-            print(f"Senha verificada com sucesso para o usuário: {user.email}")
+            login_attempts[email] = []  # Resetar tentativas após login bem-sucedido
             return {"status": "success", "user_type_id": user.user_type_id}
         else:
-            print(f"Falha na verificação da senha para o usuário: {user.email}")
+            login_attempts.setdefault(email, []).append(now)
+            raise HTTPException(status_code=401, detail="Unauthorized")
     else:
-        print("Usuário não encontrado")
-    raise HTTPException(status_code=401, detail="Unauthorized")
-
+        login_attempts.setdefault(email, []).append(now)
+        raise HTTPException(status_code=401, detail="Unauthorized")
