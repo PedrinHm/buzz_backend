@@ -19,7 +19,7 @@ def create_faculty(faculty: faculty_schema.FacultyCreate, db: Session = Depends(
     return db_faculty
 
 @router.get("/", response_model=List[faculty_schema.Faculty])
-def read_faculties(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_faculties(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
     faculties = db.query(faculty_model.Faculty).offset(skip).limit(limit).all()
     return faculties
 
