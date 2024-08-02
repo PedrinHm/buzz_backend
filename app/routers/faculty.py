@@ -12,6 +12,11 @@ router = APIRouter(
 
 @router.post("/", response_model=faculty_schema.Faculty)
 def create_faculty(faculty: faculty_schema.FacultyCreate, db: Session = Depends(get_db)):
+    # Verifica se já existe uma faculdade com o mesmo nome
+    existing_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.name == faculty.name).first()
+    if existing_faculty:
+        raise HTTPException(status_code=400, detail="Faculty with this name already exists")
+
     db_faculty = faculty_model.Faculty(name=faculty.name)
     db.add(db_faculty)
     db.commit()
@@ -29,6 +34,22 @@ def read_faculty(faculty_id: int, db: Session = Depends(get_db)):
     if faculty is None:
         raise HTTPException(status_code=404, detail="Faculty not found")
     return faculty
+
+@router.put("/{faculty_id}", response_model=faculty_schema.Faculty)
+def update_faculty(faculty_id: int, faculty: faculty_schema.FacultyCreate, db: Session = Depends(get_db)):
+    db_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.id == faculty_id).first()
+    if db_faculty is None:
+        raise HTTPException(status_code=404, detail="Faculty not found")
+    
+    # Verifica se já existe uma faculdade com o mesmo nome (exceto a que está sendo atualizada)
+    existing_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.name == faculty.name, faculty_model.Faculty.id != faculty_id).first()
+    if existing_faculty:
+        raise HTTPException(status_code=400, detail="Faculty with this name already exists")
+    
+    db_faculty.name = faculty.name
+    db.commit()
+    db.refresh(db_faculty)
+    return db_faculty
 
 @router.delete("/{faculty_id}", response_model=faculty_schema.Faculty)
 def delete_faculty(faculty_id: int, db: Session = Depends(get_db)):
