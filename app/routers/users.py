@@ -35,8 +35,10 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         cpf=user.cpf,
         phone=user.phone,
+        course=user.course,  # Novo campo
+        faculty_id=user.faculty_id,  # Novo campo
         user_type_id=user.user_type_id,
-        first_login="true"
+        first_login="false"
     )
     new_user.set_password(user.password)
     db.add(new_user)

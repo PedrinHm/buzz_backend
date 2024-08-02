@@ -1,4 +1,3 @@
-# app/models/user.py
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ..config.database import Base
@@ -16,7 +15,9 @@ class User(Base):
     cpf = Column(String, unique=True)
     phone = Column(String, unique=True)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
-    first_login = Column(String, default="true")
+    first_login = Column(String, default="false")
+    course = Column(String)  
+    faculty_id = Column(Integer, ForeignKey('faculties.id'))
 
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -24,6 +25,7 @@ class User(Base):
     
     trips = relationship("Trip", back_populates="driver")
     student_trips = relationship("StudentTrip", back_populates="student")
+    faculty = relationship("Faculty")  # Relacionamento com a tabela de faculdades
 
     def verify_password(self, password):
         if not password or not self.password:

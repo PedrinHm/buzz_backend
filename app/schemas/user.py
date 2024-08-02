@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 import phonenumbers
 import re
@@ -21,6 +21,8 @@ class UserBase(BaseModel):
     name: Optional[str] = None
     cpf: Optional[str] = None
     phone: Optional[str] = None
+    course: Optional[str] = None  # Novo campo
+    faculty_id: Optional[int] = None  # Novo campo
 
     @validator('phone')
     def validate_phone(cls, v):
@@ -51,6 +53,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     password: Optional[str] = None
+    course: Optional[str] = None  # Novo campo
+    faculty_id: Optional[int] = None  # Novo campo
 
     @validator('phone', check_fields=False)
     def validate_phone(cls, v):
@@ -78,7 +82,7 @@ class UserInDBBase(UserBase):
     user_type_id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class User(UserInDBBase):
     pass

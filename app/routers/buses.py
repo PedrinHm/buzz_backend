@@ -15,19 +15,19 @@ router = APIRouter(
 def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
     # Verifica se o número de registro ou nome já estão registrados
     db_bus = db.query(BusModel).filter(
-        (BusModel.registration_number == bus.registration_number) |
+        (BusModel.registration_number == bus.registration_number.upper()) |
         (BusModel.name == bus.name) &
         (BusModel.system_deleted == 0)
     ).first()
     if db_bus:
-        if db_bus.registration_number == bus.registration_number:
+        if db_bus.registration_number == bus.registration_number.upper():
             raise HTTPException(status_code=400, detail="Registration number already registered")
         if db_bus.name == bus.name:
             raise HTTPException(status_code=400, detail="Bus name already registered")
 
     # Cria um novo ônibus
     new_bus = BusModel(
-        registration_number=bus.registration_number,
+        registration_number=bus.registration_number.upper(),  # Aplica o upper case
         name=bus.name,
         capacity=bus.capacity
     )
@@ -71,6 +71,6 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
     db_bus = db.query(BusModel).filter(BusModel.id == bus_id).first()
     if not db_bus:
         raise HTTPException(status_code=404, detail="Bus not found")
-    db_bus.system_deleted = "1"
+    db_bus.system_deleted = 1
     db.commit()
     return {"ok": True}

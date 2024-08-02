@@ -12,6 +12,12 @@ class BusCreate(BusBase):
     name: str
     capacity: int
 
+    @validator("registration_number", pre=True, always=True)
+    def uppercase_registration_number(cls, v):
+        if v:
+            return v.upper()
+        return v
+
     @validator("registration_number")
     def validate_registration_number(cls, v):
         pattern = r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$|^[A-Z]{3}[0-9]{4}$'
@@ -20,7 +26,11 @@ class BusCreate(BusBase):
         return v
 
 class BusUpdate(BusBase):
-    pass
+    @validator("registration_number", pre=True, always=True)
+    def uppercase_registration_number(cls, v):
+        if v:
+            return v.upper()
+        return v
 
 class BusInDBBase(BusBase):
     id: int
@@ -30,7 +40,7 @@ class BusInDBBase(BusBase):
     system_deleted: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class Bus(BusInDBBase):
     pass
