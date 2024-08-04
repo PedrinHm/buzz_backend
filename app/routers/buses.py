@@ -15,8 +15,8 @@ router = APIRouter(
 def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
     # Verifica se o número de registro ou nome já estão registrados
     db_bus = db.query(BusModel).filter(
-        (BusModel.registration_number == bus.registration_number.upper()) |
-        (BusModel.name == bus.name) &
+        ((BusModel.registration_number == bus.registration_number.upper()) |
+         (BusModel.name == bus.name)) &
         (BusModel.system_deleted == 0)
     ).first()
     if db_bus:
@@ -24,6 +24,21 @@ def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Registration number already registered")
         if db_bus.name == bus.name:
             raise HTTPException(status_code=400, detail="Bus name already registered")
+    
+    # Verifica se o ônibus está deletado e reativa-o, se necessário
+    db_bus_deleted = db.query(BusModel).filter(
+        ((BusModel.registration_number == bus.registration_number.upper()) |
+         (BusModel.name == bus.name)) &
+        (BusModel.system_deleted != 0)
+    ).first()
+    if db_bus_deleted:
+        db_bus_deleted.system_deleted = 0
+        db_bus_deleted.registration_number = bus.registration_number.upper()
+        db_bus_deleted.name = bus.name
+        db_bus_deleted.capacity = bus.capacity
+        db.commit()
+        db.refresh(db_bus_deleted)
+        return db_bus_deleted
 
     # Cria um novo ônibus
     new_bus = BusModel(

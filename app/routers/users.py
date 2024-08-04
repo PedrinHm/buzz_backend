@@ -13,20 +13,35 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Verifica se o email, telefone ou CPF já estão registrados e não estão deletados
+    # Verifica se o email, telefone ou CPF já estão registrados
     db_user = db.query(UserModel).filter(
         ((UserModel.email == user.email) | 
          (UserModel.phone == user.phone) | 
-         (UserModel.cpf == user.cpf)) & 
-         (UserModel.system_deleted == 0)
+         (UserModel.cpf == user.cpf))
     ).first()
+    
     if db_user:
-        if db_user.email == user.email:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        if db_user.phone == user.phone:
-            raise HTTPException(status_code=400, detail="Phone number already registered")
-        if db_user.cpf == user.cpf:
-            raise HTTPException(status_code=400, detail="CPF already registered")
+        if db_user.system_deleted == 0:
+            if db_user.email == user.email:
+                raise HTTPException(status_code=400, detail="Email already registered")
+            if db_user.phone == user.phone:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+            if db_user.cpf == user.cpf:
+                raise HTTPException(status_code=400, detail="CPF already registered")
+        else:
+            # Se o registro estiver marcado como deletado, reativa-o e atualiza os campos necessários
+            db_user.system_deleted = 0
+            db_user.name = user.name
+            db_user.email = user.email
+            db_user.cpf = user.cpf
+            db_user.phone = user.phone
+            db_user.course = user.course
+            db_user.faculty_id = user.faculty_id
+            db_user.user_type_id = user.user_type_id
+            db_user.set_password(user.password)
+            db.commit()
+            db.refresh(db_user)
+            return db_user
 
     # Cria um novo usuário e define a senha hashada
     new_user = UserModel(

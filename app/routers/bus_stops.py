@@ -13,9 +13,25 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.BusStop)
 def create_bus_stop(bus_stop: schemas.BusStopCreate, db: Session = Depends(get_db)):
-    db_bus_stop = db.query(BusStopModel).filter(BusStopModel.name == bus_stop.name).first()
+    # Verifica se o nome já está registrado e não está deletado
+    db_bus_stop = db.query(BusStopModel).filter(
+        (BusStopModel.name == bus_stop.name) &
+        (BusStopModel.system_deleted == 0)
+    ).first()
     if db_bus_stop:
         raise HTTPException(status_code=400, detail="Bus stop name already registered")
+
+    # Verifica se o nome já está registrado mas está deletado e reativa-o
+    db_bus_stop_deleted = db.query(BusStopModel).filter(
+        (BusStopModel.name == bus_stop.name) &
+        (BusStopModel.system_deleted != 0)
+    ).first()
+    if db_bus_stop_deleted:
+        db_bus_stop_deleted.system_deleted = 0
+        db_bus_stop_deleted.faculty_id = bus_stop.faculty_id
+        db.commit()
+        db.refresh(db_bus_stop_deleted)
+        return db_bus_stop_deleted
     
     new_bus_stop = BusStopModel(
         name=bus_stop.name,
@@ -41,7 +57,7 @@ def read_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{bus_stop_id}", response_model=schemas.BusStop)
 def update_bus_stop(bus_stop_id: int, bus_stop: schemas.BusStopUpdate, db: Session = Depends(get_db)):
-    db_bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id).first()
+    db_bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id, BusStopModel.system_deleted == 0).first()
     if not db_bus_stop:
         raise HTTPException(status_code=404, detail="Bus stop not found")
     for var, value in vars(bus_stop).items():
