@@ -56,6 +56,14 @@ def read_buses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     buses = db.query(BusModel).filter(BusModel.system_deleted == 0).offset(skip).limit(limit).all()
     return buses
 
+@router.get("/available", response_model=List[schemas.Bus])
+def read_available_buses(db: Session = Depends(get_db)):
+    buses = db.query(BusModel).filter(
+        BusModel.system_deleted == 0,
+        ~db.query(models.Trip).filter(models.Trip.bus_id == BusModel.id, models.Trip.status == 1).exists()
+    ).all()
+    return buses
+
 @router.get("/{bus_id}", response_model=schemas.Bus)
 def read_bus(bus_id: int, db: Session = Depends(get_db)):
     bus = db.query(BusModel).filter(BusModel.id == bus_id, BusModel.system_deleted == 0).first()
