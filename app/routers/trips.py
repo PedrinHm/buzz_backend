@@ -135,3 +135,16 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(trip)
     return trip
+
+@router.get("/active/{driver_id}", response_model=Trip)
+def check_active_trip(driver_id: int, db: Session = Depends(get_db)):
+    active_trip = db.query(TripModel).filter(
+        TripModel.driver_id == driver_id,
+        TripModel.status == TripStatusEnum.ATIVA,
+        TripModel.system_deleted == 0
+    ).first()
+
+    if not active_trip:
+        raise HTTPException(status_code=404, detail="No active trip found for this driver.")
+    
+    return active_trip

@@ -18,6 +18,7 @@ class LoginData(BaseModel):
 class LoginResponse(BaseModel):
     status: str
     user_type_id: int
+    id: int
 
 def get_db():
     db = SessionLocal()
@@ -46,7 +47,7 @@ async def login(login_data: LoginData, db: Session = Depends(get_db)):
     if user:
         if user.verify_password(login_data.password):
             login_attempts[email] = []  # Resetar tentativas após login bem-sucedido
-            return {"status": "success", "user_type_id": user.user_type_id}
+            return {"status": "success", "user_type_id": user.user_type_id, "id": user.id}
         else:
             login_attempts.setdefault(email, []).append(now)
             raise HTTPException(status_code=401, detail="Unauthorized")
