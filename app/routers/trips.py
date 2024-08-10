@@ -5,6 +5,7 @@ from ..config.database import get_db
 from ..models.trip import Trip as TripModel, TripTypeEnum, TripStatusEnum
 from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatusEnum
 from ..models.trip_bus_stop import TripBusStop, TripBusStopStatusEnum
+from ..models.bus_stop import BusStop
 from ..schemas.trip import Trip, TripCreate
 
 router = APIRouter(
@@ -166,3 +167,21 @@ def get_trip_student_details(trip_id: int, db: Session = Depends(get_db)):
             "student_status": StudentStatusEnum(detail.status).name
         } for detail in trip_details
     ]
+
+
+@router.get("/{trip_id}/bus_stops", response_model=List[dict])
+def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
+    results = db.query(
+        BusStop.name,
+        TripBusStop.status
+    ).join(
+        TripBusStop, BusStop.id == TripBusStop.bus_stop_id
+    ).filter(
+        TripBusStop.trip_id == trip_id,
+        TripBusStop.system_deleted == 0  # Assume there's a flag for soft deletion
+    ).all()
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No bus stops found for this trip")
+
+    return [{"name": name, "status": TripBusStopStatusEnum(status).name} for name, status in results]

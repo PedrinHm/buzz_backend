@@ -18,7 +18,7 @@ class TripBusStop(Base):
     id = Column(Integer, primary_key=True, index=True)
     trip_id = Column(Integer, ForeignKey('trips.id'), nullable=False)
     bus_stop_id = Column(Integer, ForeignKey('bus_stops.id'), nullable=False)
-    status = Column(Integer, nullable=False, default=TripBusStopStatusEnum.A_CAMINHO)
+    status = Column(Integer, nullable=False)
    
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
