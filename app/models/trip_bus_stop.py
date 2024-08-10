@@ -10,6 +10,7 @@ class TripBusStopStatusEnum(int, Enum):
     PROXIMO_PONTO = 3
     JA_PASSOU = 4
     ONIBUS_COM_PROBLEMA = 5
+    DESENBARQUE = 6
 
 class TripBusStop(Base):
     __tablename__ = 'trip_bus_stops'
