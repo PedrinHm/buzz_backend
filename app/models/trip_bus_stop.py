@@ -12,6 +12,17 @@ class TripBusStopStatusEnum(int, Enum):
     ONIBUS_COM_PROBLEMA = 5
     DESENBARQUE = 6
 
+    def label(self):
+        labels = {
+            1: "A caminho",
+            2: "No ponto",
+            3: "Próximo ponto",
+            4: "Já passou",
+            5: "Ônibus com problema",
+            6: "Desembarque"
+        }
+        return labels.get(self.value, self.name)
+
 class TripBusStop(Base):
     __tablename__ = 'trip_bus_stops'
 

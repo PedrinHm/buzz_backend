@@ -4,12 +4,24 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..config.database import Base
 
+from enum import Enum
+
 class StudentStatusEnum(int, Enum):
     PRESENTE = 1
     EM_AULA = 2
     AGUARDANDO_NO_PONTO = 3
     NAO_VOLTARA = 4
     FILA_DE_ESPERA = 5
+
+    def label(self):
+        labels = {
+            1: "Presente",
+            2: "Em aula",
+            3: "Aguardando ônibus",
+            4: "Não voltará",
+            5: "Fila de espera"
+        }
+        return labels.get(self.value, self.name)
 
 class StudentTrip(Base):
     __tablename__ = "student_trips"

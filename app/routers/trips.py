@@ -156,18 +156,21 @@ def get_trip_student_details(trip_id: int, db: Session = Depends(get_db)):
         .options(joinedload(StudentTripModel.student), joinedload(StudentTripModel.bus_stop))\
         .filter(StudentTripModel.trip_id == trip_id, StudentTripModel.system_deleted == 0)\
         .all()
-
+    
     if not trip_details:
         raise HTTPException(status_code=404, detail="No student trip details found for this trip")
 
-    return [
+    result = [
         {
             "student_name": detail.student.name,
             "bus_stop_name": detail.bus_stop.name,
-            "student_status": StudentStatusEnum(detail.status).name
+            "student_status": StudentStatusEnum(detail.status).label()
         } for detail in trip_details
     ]
 
+    print(result)  # Imprime os dados no console
+
+    return result
 
 @router.get("/{trip_id}/bus_stops", response_model=List[dict])
 def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
@@ -184,4 +187,4 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
     if not results:
         raise HTTPException(status_code=404, detail="No bus stops found for this trip")
 
-    return [{"name": name, "status": TripBusStopStatusEnum(status).name} for name, status in results]
+    return [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in results]
