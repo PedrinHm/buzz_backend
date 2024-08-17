@@ -119,23 +119,26 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
+    print(f"Trip Type: {trip.trip_type}, Status: {trip.status}")
+    
     if trip.trip_type != TripTypeEnum.VOLTA:
         raise HTTPException(status_code=400, detail="Trip is not a return trip")
 
     if trip.status != TripStatusEnum.ATIVA:
         raise HTTPException(status_code=400, detail="Trip is not active")
 
-    # Verificar se todos os pontos de ônibus têm o status JA_PASSOU
-    bus_stops = db.query(TripBusStopModel).filter(TripBusStopModel.trip_id == trip_id).all()
+    bus_stops = db.query(TripBusStop).filter(TripBusStop.trip_id == trip_id).all()
     for bus_stop in bus_stops:
+        print(f"Bus Stop Status: {bus_stop.status}")
         if bus_stop.status != TripBusStopStatusEnum.JA_PASSOU:
             raise HTTPException(status_code=400, detail="Not all bus stops have passed")
 
-    # Finalizar a viagem de volta
     trip.status = TripStatusEnum.CONCLUIDA
     db.commit()
     db.refresh(trip)
     return trip
+
+
 
 @router.get("/active/{driver_id}", response_model=Trip)
 def check_active_trip(driver_id: int, db: Session = Depends(get_db)):
@@ -188,3 +191,4 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No bus stops found for this trip")
 
     return [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in results]
+

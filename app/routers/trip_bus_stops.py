@@ -161,3 +161,34 @@ def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
     ]
 
     return result
+
+@router.put("/finalizar_ponto_atual/{trip_id}", response_model=TripBusStop)
+def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
+    # Obter o ponto atual com status "No ponto"
+    current_stop = db.query(TripBusStopModel).filter(
+        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.status == TripBusStopStatusEnum.NO_PONTO,
+        TripBusStopModel.system_deleted == 0
+    ).first()
+
+    if not current_stop:
+        raise HTTPException(status_code=404, detail="No bus stop with status 'No ponto' found")
+
+    # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" no ponto atual
+    students_in_current_stop = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == trip_id,
+        StudentTripModel.point_id == current_stop.bus_stop_id,
+        StudentTripModel.status.in_([StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA])
+    ).all()
+
+    if students_in_current_stop:
+        print(f"Alunos aguardando ou em aula: {students_in_current_stop}")
+        raise HTTPException(status_code=400, detail="Cannot finalize the stop while students are still waiting at the current stop")
+
+    # Definir o status do ponto atual como "Já passou"
+    current_stop.status = TripBusStopStatusEnum.JA_PASSOU
+    db.commit()
+    db.refresh(current_stop)
+
+    return current_stop
+
