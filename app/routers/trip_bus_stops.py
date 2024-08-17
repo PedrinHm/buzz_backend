@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from ..config.database import get_db
 from ..models.trip_bus_stop import TripBusStop as TripBusStopModel, TripBusStopStatusEnum
 from ..schemas.trip_bus_stop import TripBusStopUpdate, TripBusStop
@@ -74,3 +74,90 @@ def delete_trip_bus_stop(trip_bus_stop_id: int, db: Session = Depends(get_db)):
     trip_bus_stop.system_deleted = 1
     db.commit()
     return {"status": "deleted"}
+
+@router.put("/atualizar_proximo_para_no_ponto/{trip_id}", response_model=TripBusStop)
+def update_next_to_at_stop(trip_id: int, db: Session = Depends(get_db)):
+    # Encontre o ponto de ônibus que está como "Próximo ponto"
+    db_trip_bus_stop = db.query(TripBusStopModel).filter(
+        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.status == TripBusStopStatusEnum.PROXIMO_PONTO,
+        TripBusStopModel.system_deleted == 0
+    ).first()
+
+    if not db_trip_bus_stop:
+        raise HTTPException(status_code=404, detail="No bus stop with status 'Próximo ponto' found for this trip")
+
+    # Atualize o status para "No ponto"
+    db_trip_bus_stop.status = TripBusStopStatusEnum.NO_PONTO
+    db.commit()
+    db.refresh(db_trip_bus_stop)
+    
+    return db_trip_bus_stop
+
+@router.put("/selecionar_proximo_ponto/{trip_id}", response_model=TripBusStop)
+def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_db)):
+    # Obter o ponto atual com status "No ponto"
+    current_stop = db.query(TripBusStopModel).filter(
+        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.status == TripBusStopStatusEnum.NO_PONTO,
+        TripBusStopModel.system_deleted == 0
+    ).first()
+
+    if not current_stop:
+        raise HTTPException(status_code=404, detail="No bus stop with status 'No ponto' found")
+
+    # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" no ponto atual
+    students_in_current_stop = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == trip_id,
+        StudentTripModel.point_id == current_stop.bus_stop_id,
+        StudentTripModel.status.in_([StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA])
+    ).all()
+
+    if students_in_current_stop:
+        raise HTTPException(status_code=400, detail="Cannot proceed to the next stop while students are still waiting at the current stop")
+
+    # Definir o status do ponto atual como "Já passou"
+    current_stop.status = TripBusStopStatusEnum.JA_PASSOU
+    db.commit()
+
+    # Definir o status do novo ponto como "Próximo ponto"
+    new_stop = db.query(TripBusStopModel).filter(
+        TripBusStopModel.id == new_stop_id,
+        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.system_deleted == 0
+    ).first()
+
+    if not new_stop:
+        raise HTTPException(status_code=404, detail="New bus stop not found")
+
+    new_stop.status = TripBusStopStatusEnum.PROXIMO_PONTO
+    db.commit()
+    db.refresh(new_stop)
+
+    return new_stop
+
+@router.get("/pontos_a_caminho/{trip_id}", response_model=List[dict])
+def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
+    stops_on_the_way = db.query(TripBusStopModel).options(
+        joinedload(TripBusStopModel.bus_stop)  # Fazendo o join com a tabela de pontos de ônibus
+    ).filter(
+        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.status == TripBusStopStatusEnum.A_CAMINHO,
+        TripBusStopModel.system_deleted == 0
+    ).all()
+
+    if not stops_on_the_way:
+        raise HTTPException(status_code=404, detail="No stops on the way found")
+
+    # Transformando o resultado para incluir o nome do ponto de ônibus
+    result = [
+        {
+            "trip_id": stop.trip_id,
+            "bus_stop_id": stop.bus_stop_id,
+            "status": stop.status,
+            "id": stop.id,
+            "name": stop.bus_stop.name  # Incluindo o nome do ponto de ônibus
+        } for stop in stops_on_the_way
+    ]
+
+    return result
