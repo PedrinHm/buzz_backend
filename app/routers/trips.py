@@ -7,6 +7,8 @@ from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatus
 from ..models.trip_bus_stop import TripBusStop, TripBusStopStatusEnum
 from ..models.bus_stop import BusStop
 from ..schemas.trip import Trip, TripCreate
+from ..models.bus import Bus
+
 
 router = APIRouter(
     prefix="/trips",
@@ -191,4 +193,3 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No bus stops found for this trip")
 
     return [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in results]
-

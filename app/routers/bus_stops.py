@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..config.database import get_db
 from ..models.bus_stop import BusStop as BusStopModel
+from ..models.faculty import Faculty as FacultyModel
 from ..schemas.bus_stop import BusStop, BusStopCreate, BusStopUpdate
 from typing import List
 
@@ -75,3 +76,25 @@ def delete_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
     db_bus_stop.system_deleted = 1
     db.commit()
     return {"ok": True}
+
+@router.get("/list/faculty_names", response_model=List[dict])
+def get_bus_stops_with_faculty_names(db: Session = Depends(get_db)):
+    bus_stops = db.query(
+        BusStopModel.id,
+        BusStopModel.name,
+        FacultyModel.name
+    ).join(FacultyModel, BusStopModel.faculty_id == FacultyModel.id).filter(
+        BusStopModel.system_deleted == 0,
+        FacultyModel.system_deleted == 0
+    ).all()
+
+    if not bus_stops:
+        raise HTTPException(status_code=404, detail="No bus stops found")
+
+    return [
+        {
+            "id": bus_stop_id,
+            "name": f"{bus_stop_name} - {faculty_name}"
+        }
+        for bus_stop_id, bus_stop_name, faculty_name in bus_stops
+    ]

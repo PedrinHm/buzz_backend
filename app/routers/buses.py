@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..config.database import get_db
 from typing import List
+from ..models.trip import Trip as TripModel, TripStatusEnum, TripTypeEnum
 from ..models.bus import Bus as BusModel
 from ..schemas.bus import Bus, BusCreate, BusUpdate
 
@@ -97,3 +98,29 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
     db_bus.system_deleted = 1
     db.commit()
     return {"ok": True}
+
+@router.get("/trips/active_trips", response_model=List[dict])
+def get_active_buses(db: Session = Depends(get_db)):
+    active_buses = db.query(
+        BusModel.registration_number,
+        BusModel.name,
+        BusModel.capacity,
+        TripModel.trip_type
+    ).join(TripModel).filter(
+        TripModel.status == TripStatusEnum.ATIVA,
+        TripModel.system_deleted == 0,
+        BusModel.system_deleted == 0
+    ).all()
+
+    if not active_buses:
+        raise HTTPException(status_code=404, detail="No active buses found")
+
+    return [
+        {
+            "registration_number": registration_number,
+            "name": name,
+            "capacity": capacity,
+            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta"
+        }
+        for registration_number, name, capacity, trip_type in active_buses
+    ]

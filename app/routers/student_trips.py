@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 from ..config.database import get_db
 from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatusEnum
@@ -145,3 +145,23 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     db.commit()
     db.refresh(student_trip)
     return student_trip
+
+@router.get("/active/{student_id}", response_model=dict)
+async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
+    active_trip = db.query(StudentTripModel)\
+        .join(TripModel)\
+        .options(joinedload(StudentTripModel.trip))\
+        .filter(
+            StudentTripModel.student_id == student_id,
+            TripModel.status == TripStatusEnum.ATIVA
+        )\
+        .first()
+
+    if not active_trip:
+        raise HTTPException(status_code=404, detail="No active trip found for this student")
+    
+    return {
+        "trip_id": active_trip.trip.id,
+        "trip_type": TripTypeEnum(active_trip.trip.trip_type).name,
+        "trip_status": TripStatusEnum(active_trip.trip.status).name
+    }
