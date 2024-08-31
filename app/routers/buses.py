@@ -102,9 +102,11 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
 @router.get("/trips/active_trips", response_model=List[dict])
 def get_active_buses(db: Session = Depends(get_db)):
     active_buses = db.query(
+        BusModel.id.label("bus_id"),  # Adiciona o campo 'id' do ônibus
         BusModel.registration_number,
         BusModel.name,
         BusModel.capacity,
+        TripModel.id.label("trip_id"),  # Adiciona o campo 'id' da viagem
         TripModel.trip_type
     ).join(TripModel).filter(
         TripModel.status == TripStatusEnum.ATIVA,
@@ -117,10 +119,13 @@ def get_active_buses(db: Session = Depends(get_db)):
 
     return [
         {
+            "bus_id": bus_id,  # Inclui o 'id' do ônibus na resposta
+            "trip_id": trip_id,  # Inclui o 'id' da viagem na resposta
             "registration_number": registration_number,
             "name": name,
             "capacity": capacity,
             "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta"
         }
-        for registration_number, name, capacity, trip_type in active_buses
+        for bus_id, registration_number, name, capacity, trip_id, trip_type in active_buses
     ]
+
