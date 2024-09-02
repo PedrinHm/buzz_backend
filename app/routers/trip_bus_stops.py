@@ -103,22 +103,21 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
         TripBusStopModel.system_deleted == 0
     ).first()
 
-    if not current_stop:
-        raise HTTPException(status_code=404, detail="No bus stop with status 'No ponto' found")
+    # Caso exista um ponto com status "No ponto", execute a lógica
+    if current_stop:
+        # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" no ponto atual
+        students_in_current_stop = db.query(StudentTripModel).filter(
+            StudentTripModel.trip_id == trip_id,
+            StudentTripModel.point_id == current_stop.bus_stop_id,
+            StudentTripModel.status.in_([StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA])
+        ).all()
 
-    # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" no ponto atual
-    students_in_current_stop = db.query(StudentTripModel).filter(
-        StudentTripModel.trip_id == trip_id,
-        StudentTripModel.point_id == current_stop.bus_stop_id,
-        StudentTripModel.status.in_([StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA])
-    ).all()
+        if students_in_current_stop:
+            raise HTTPException(status_code=400, detail="Cannot proceed to the next stop while students are still waiting at the current stop")
 
-    if students_in_current_stop:
-        raise HTTPException(status_code=400, detail="Cannot proceed to the next stop while students are still waiting at the current stop")
-
-    # Definir o status do ponto atual como "Já passou"
-    current_stop.status = TripBusStopStatusEnum.JA_PASSOU
-    db.commit()
+        # Definir o status do ponto atual como "Já passou"
+        current_stop.status = TripBusStopStatusEnum.JA_PASSOU
+        db.commit()
 
     # Definir o status do novo ponto como "Próximo ponto"
     new_stop = db.query(TripBusStopModel).filter(
@@ -135,6 +134,7 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
     db.refresh(new_stop)
 
     return new_stop
+
 
 @router.get("/pontos_a_caminho/{trip_id}", response_model=List[dict])
 def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):

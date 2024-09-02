@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..config.database import get_db
 from ..models.bus_stop import BusStop as BusStopModel
 from ..models.faculty import Faculty as FacultyModel
-from ..models.trip_bus_stop import TripBusStop as TripBusStopModel  # Importa o modelo TripBusStop
-from ..models.trip import Trip as TripModel  # Importa o modelo Trip, caso necessário
+from ..models.trip_bus_stop import TripBusStop as TripBusStopModel  
+from ..models.trip import Trip as TripModel, TripTypeEnum  
+from ..models.student_trip import StudentTrip as StudentTripModel  
+from ..models.trip_bus_stop import TripBusStopStatusEnum 
 from ..schemas.bus_stop import BusStop, BusStopCreate, BusStopUpdate
 from typing import List
 
@@ -13,6 +15,120 @@ router = APIRouter(
     prefix="/bus_stops",
     tags=["Bus Stops"]
 )
+@router.get("/action/trip", response_model=List[dict])
+def get_bus_stops_for_trip(
+    student_id: int = Query(..., description="ID do aluno"),
+    db: Session = Depends(get_db)
+):
+    # Consulta para obter o ponto de ônibus selecionado pelo aluno no vínculo de student_trip
+    selected_student_trip = db.query(StudentTripModel).filter(
+        StudentTripModel.student_id == student_id,
+        StudentTripModel.system_deleted == 0
+    ).first()
+
+    if not selected_student_trip:
+        raise HTTPException(status_code=404, detail="No student trip found")
+
+    # Consulta para obter o tipo de viagem da trip associada
+    trip = db.query(TripModel).filter(
+        TripModel.id == selected_student_trip.trip_id,
+        TripModel.system_deleted == 0
+    ).first()
+
+    if not trip:
+        raise HTTPException(status_code=404, detail="No trip found for the student")
+
+    # Se o estudante tem um ponto de ônibus selecionado, pegue o ID do ponto
+    selected_bus_stop_id = selected_student_trip.point_id if selected_student_trip else None
+
+    # Base da consulta para todos os pontos de ônibus
+    base_query = db.query(BusStopModel, FacultyModel).join(FacultyModel, BusStopModel.faculty_id == FacultyModel.id).filter(
+        BusStopModel.system_deleted == 0,
+        FacultyModel.system_deleted == 0,
+        BusStopModel.id != selected_bus_stop_id if selected_bus_stop_id else True
+    )
+
+    # Verifica o tipo de viagem
+    if trip.trip_type == TripTypeEnum.VOLTA:
+        # Pega os pontos de ônibus que não têm o status 'já passou' (usando o valor numérico correto)
+        trip_bus_stops = db.query(TripBusStopModel).filter(
+            TripBusStopModel.trip_id == trip.id,
+            TripBusStopModel.system_deleted == 0,
+            TripBusStopModel.status != TripBusStopStatusEnum.JA_PASSOU.value  # Usando o valor numérico correto do Enum
+        ).all()
+
+        # Converte para um conjunto de IDs de pontos de ônibus
+        trip_bus_stop_ids = {tbs.bus_stop_id for tbs in trip_bus_stops}
+
+        # Filtra pontos de ônibus que estão na trip_bus_stops e não possuem o status 'já passou'
+        bus_stops = base_query.filter(
+            or_(
+                BusStopModel.id.in_(trip_bus_stop_ids),
+                ~BusStopModel.id.in_(trip_bus_stop_ids)
+            )
+        ).all()
+
+        # Retorna o resultado com o status apropriado
+        result = [
+            {
+                "id": bus_stop.id,
+                "name": f"{bus_stop.name} - {faculty.name}",
+                "status": "A caminho" if bus_stop.id not in trip_bus_stop_ids else next(
+                    (TripBusStopStatusEnum(tbs.status).label() for tbs in trip_bus_stops if tbs.bus_stop_id == bus_stop.id), "A caminho"
+                )
+            }
+            for bus_stop, faculty in bus_stops
+        ]
+
+    elif trip.trip_type == TripTypeEnum.IDA:
+        # Retorna pontos de ônibus para viagem de ida sem alterações adicionais
+        bus_stops = base_query.all()
+
+        result = [
+            {
+                "id": bus_stop.id,
+                "name": f"{bus_stop.name} - {faculty.name}",
+                "status": "A caminho"
+            }
+            for bus_stop, faculty in bus_stops
+        ]
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de viagem inválido. Use 'ida' ou 'volta'.")
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No bus stops found")
+
+    return result
+
+@router.get("/action/ida", response_model=List[dict])
+def get_bus_stops_for_departure(student_id: int = Query(..., description="ID do aluno"), db: Session = Depends(get_db)):
+    # Consulta para obter o ponto de ônibus selecionado pelo aluno no vínculo de student_trip
+    selected_bus_stop = db.query(StudentTripModel).filter(
+        StudentTripModel.student_id == student_id,
+        StudentTripModel.system_deleted == 0
+    ).first()
+
+    # Se o estudante tem um ponto de ônibus selecionado, pegue o ID do ponto
+    selected_bus_stop_id = selected_bus_stop.point_id if selected_bus_stop else None
+
+    # Consulta para obter todos os pontos de ônibus, excluindo o ponto já selecionado pelo aluno
+    bus_stops = db.query(BusStopModel, FacultyModel).join(FacultyModel, BusStopModel.faculty_id == FacultyModel.id).filter(
+        BusStopModel.system_deleted == 0,
+        FacultyModel.system_deleted == 0,
+        BusStopModel.id != selected_bus_stop_id if selected_bus_stop_id else True
+    ).all()
+
+    if not bus_stops:
+        raise HTTPException(status_code=404, detail="No bus stops found")
+
+    return [
+        {
+            "id": bus_stop.id,
+            "name": f"{bus_stop.name} - {faculty.name}",
+            "status": "A caminho"
+        }
+        for bus_stop, faculty in bus_stops
+    ]
 
 @router.get("/ida", response_model=List[dict])  # Define explicitamente o caminho "/ida"
 def get_bus_stops_for_departure(db: Session = Depends(get_db)):
