@@ -160,7 +160,9 @@ async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
     if not active_trip:
         raise HTTPException(status_code=404, detail="No active trip found for this student")
     
+    # Retorna o student_trip_id junto com os outros detalhes
     return {
+        "student_trip_id": active_trip.id,  # Adiciona o ID do student_trip
         "trip_id": active_trip.trip.id,
         "trip_type": TripTypeEnum(active_trip.trip.trip_type).name,
         "trip_status": TripStatusEnum(active_trip.trip.status).name
