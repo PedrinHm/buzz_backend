@@ -1,16 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..config.database import get_db
 from typing import List
 from ..models.trip import Trip as TripModel, TripStatusEnum, TripTypeEnum
 from ..models.bus import Bus as BusModel
+from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatusEnum
 from ..schemas.bus import Bus, BusCreate, BusUpdate
 
 router = APIRouter(
     prefix="/buses",
     tags=["Buses"]
 )
+
+@router.get("/available_for_student", response_model=List[dict])
+def get_available_buses_for_student(student_id: int = Query(...), db: Session = Depends(get_db)):
+    # Buscar o trip_id atual do aluno
+    current_trip = db.query(StudentTripModel).filter(
+        StudentTripModel.student_id == student_id,
+        StudentTripModel.system_deleted == 0
+    ).first()
+
+    if not current_trip:
+        raise HTTPException(status_code=404, detail="Student trip not found")
+
+    # Obter ônibus em viagens ativas, excluindo o ônibus que o aluno está vinculado
+    active_buses = db.query(
+        BusModel.id.label("bus_id"),
+        BusModel.registration_number,
+        BusModel.name,
+        BusModel.capacity,
+        TripModel.id.label("trip_id"),
+        TripModel.trip_type
+    ).join(TripModel).filter(
+        TripModel.status == TripStatusEnum.ATIVA,
+        TripModel.system_deleted == 0,
+        BusModel.system_deleted == 0,
+        TripModel.bus_id != current_trip.trip.bus_id  # Exclui o ônibus vinculado ao aluno
+    ).all()
+
+    if not active_buses:
+        raise HTTPException(status_code=404, detail="No active buses found")
+
+    return [
+        {
+            "bus_id": bus_id,
+            "trip_id": trip_id,
+            "registration_number": registration_number,
+            "name": name,
+            "capacity": capacity,
+            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta"
+        }
+        for bus_id, registration_number, name, capacity, trip_id, trip_type in active_buses
+    ]
 
 @router.post("/", response_model=schemas.Bus)
 def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
