@@ -18,6 +18,8 @@ class User(Base):
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
     profile_picture = Column(String)  # Novo campo para foto de perfil em base64
 
+    reset_token = Column(String, nullable=True)
+
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)
