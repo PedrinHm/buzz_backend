@@ -14,6 +14,37 @@ router = APIRouter(
     tags=["Student Trips"]
 )
 
+@router.put("/{student_trip_id}/update_status", response_model=StudentTrip)
+def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEnum, db: Session = Depends(get_db)):
+    student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
+    if not student_trip:
+        raise HTTPException(status_code=404, detail="Student trip not found")
+
+    current_status = StudentStatusEnum(student_trip.status)
+
+    # Define as transições permitidas
+    allowed_transitions = {
+        StudentStatusEnum.EM_AULA: [StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.PRESENTE],
+        StudentStatusEnum.AGUARDANDO_NO_PONTO: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.NAO_VOLTARA],
+        StudentStatusEnum.NAO_VOLTARA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO],
+        StudentStatusEnum.FILA_DE_ESPERA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA]
+    }
+
+    # Verifica se a transição é permitida
+    if new_status not in allowed_transitions.get(current_status, []):
+        raise HTTPException(status_code=400, detail="Status transition not allowed")
+
+    # Verifica a capacidade do ônibus se a transição for de NAO_VOLTARA ou FILA_DE_ESPERA para outro status
+    if current_status in [StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.FILA_DE_ESPERA] and new_status != current_status:
+        if not check_capacity(student_trip.trip_id, db):
+            raise HTTPException(status_code=400, detail="Bus capacity exceeded")
+
+    # Atualiza o status do aluno
+    student_trip.status = new_status
+    db.commit()
+    db.refresh(student_trip)
+    return student_trip
+    
 def check_capacity(trip_id: int, db: Session) -> bool:
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
