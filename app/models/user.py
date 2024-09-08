@@ -8,16 +8,15 @@ class User(Base):
     __tablename__ = 'users'
     
     id = Column(Integer, primary_key=True, index=True)
-    login = Column(String, unique=True, index=True)
     password = Column(String)
     name = Column(String)
-    email = Column(String, unique=True)
+    email = Column(String, unique=True, index=True)
     cpf = Column(String, unique=True)
     phone = Column(String, unique=True)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
     first_login = Column(String, default="false")
-    course = Column(String)  
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
+    profile_picture = Column(String)  # Novo campo para foto de perfil em base64
 
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

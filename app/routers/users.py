@@ -4,7 +4,8 @@ from .. import models, schemas
 from ..config.database import get_db
 from typing import List
 from ..models.user import User as UserModel
-from ..schemas.user import User, UserCreate, UserUpdate
+from ..schemas.user import User, UserCreate, UserUpdate, UserProfilePicture
+from ..schemas import User as UserSchema
 
 router = APIRouter(
     prefix="/users",
@@ -13,7 +14,6 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Verifica se o email, telefone ou CPF já estão registrados
     db_user = db.query(UserModel).filter(
         ((UserModel.email == user.email) | 
          (UserModel.phone == user.phone) | 
@@ -29,13 +29,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             if db_user.cpf == user.cpf:
                 raise HTTPException(status_code=400, detail="CPF already registered")
         else:
-            # Se o registro estiver marcado como deletado, reativa-o e atualiza os campos necessários
+            # Reativar usuário
             db_user.system_deleted = 0
             db_user.name = user.name
             db_user.email = user.email
             db_user.cpf = user.cpf
             db_user.phone = user.phone
-            db_user.course = user.course
             db_user.faculty_id = user.faculty_id
             db_user.user_type_id = user.user_type_id
             db_user.set_password(user.password)
@@ -43,15 +42,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             db.refresh(db_user)
             return db_user
 
-    # Cria um novo usuário e define a senha hashada
+    # Cria um novo usuário
     new_user = UserModel(
-        login=user.email,  # Assuming login is same as email
         name=user.name,
         email=user.email,
         cpf=user.cpf,
         phone=user.phone,
-        course=user.course,  # Novo campo
-        faculty_id=user.faculty_id,  # Novo campo
+        faculty_id=user.faculty_id,
         user_type_id=user.user_type_id,
         first_login="false"
     )
@@ -66,11 +63,20 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = db.query(UserModel).filter(UserModel.system_deleted == 0).offset(skip).limit(limit).all()
     return users
 
-@router.get("/{user_id}", response_model=schemas.User)
+@router.get("/{user_id}", response_model=UserSchema)
 def read_user(user_id: int, db: Session = Depends(get_db)):
+    # Realiza a consulta para trazer o usuário junto com o nome da faculdade
     user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
+
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Verifica se o usuário possui uma faculdade associada e retorna o nome
+    if user.faculty:
+        user.faculty_name = user.faculty.name
+    else:
+        user.faculty_name = None
+
     return user
 
 @router.put("/{user_id}", response_model=schemas.User)
@@ -84,6 +90,15 @@ def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(ge
                 db_user.set_password(value)
             else:
                 setattr(db_user, var, value)
+    db.commit()
+    return db_user
+
+@router.put("/{user_id}/profile-picture", response_model=schemas.User)
+def update_profile_picture(user_id: int, profile_picture: schemas.UserProfilePicture, db: Session = Depends(get_db)):
+    db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_user.profile_picture = profile_picture.picture
     db.commit()
     return db_user
 

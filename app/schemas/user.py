@@ -21,8 +21,7 @@ class UserBase(BaseModel):
     name: Optional[str] = None
     cpf: Optional[str] = None
     phone: Optional[str] = None
-    course: Optional[str] = None  # Novo campo
-    faculty_id: Optional[int] = None  # Novo campo
+    faculty_id: Optional[int] = None
 
     @validator('phone')
     def validate_phone(cls, v):
@@ -53,8 +52,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     password: Optional[str] = None
-    course: Optional[str] = None  # Novo campo
-    faculty_id: Optional[int] = None  # Novo campo
+    faculty_id: Optional[int] = None
 
     @validator('phone', check_fields=False)
     def validate_phone(cls, v):
@@ -73,6 +71,9 @@ class UserUpdate(BaseModel):
             raise ValueError("Invalid CPF")
         return v
 
+class UserProfilePicture(BaseModel):
+    picture: str
+
 class UserInDBBase(UserBase):
     id: int
     email: EmailStr
@@ -80,6 +81,8 @@ class UserInDBBase(UserBase):
     cpf: str
     phone: str
     user_type_id: int
+    profile_picture: Optional[str] = None
+    faculty_name: Optional[str] = None  # Adiciona o nome da faculdade
 
     class Config:
         orm_mode = True
