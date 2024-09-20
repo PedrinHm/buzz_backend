@@ -1,5 +1,6 @@
 fastapi==0.115.0
 psycopg2-binary
+uvicorn
 phonenumbers==8.13.45
 pydantic==2.9.2
 pyrebase==3.0.27
