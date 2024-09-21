@@ -131,22 +131,91 @@ def delete_student_trip(student_trip_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{student_trip_id}/update_point", response_model=StudentTrip)
 def update_student_trip_point(student_trip_id: int, point_id: int, db: Session = Depends(get_db)):
+    # Busca o registro de viagem do estudante
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
         raise HTTPException(status_code=404, detail="Student trip not found")
     
+    # Busca os detalhes da viagem do estudante
+    trip = db.query(TripModel).filter(TripModel.id == student_trip.trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    # Armazena o ponto anterior
+    old_point_id = student_trip.point_id
+
+    # Verifica se o novo ponto de ônibus já existe na tabela trip_bus_stop para essa viagem
     trip_bus_stop = db.query(TripBusStopModel).filter(
         TripBusStopModel.trip_id == student_trip.trip_id,
         TripBusStopModel.bus_stop_id == point_id
     ).first()
 
-    if trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
+    # Se o ponto já existe e estava deletado (system_deleted = 1), reativa o ponto
+    if trip_bus_stop and trip_bus_stop.system_deleted == 1:
+        print(f"Reactivating bus stop {point_id} for trip {student_trip.trip_id}")
+        trip_bus_stop.system_deleted = 0
+        db.commit()
+        db.refresh(trip_bus_stop)
+
+    # Se o ponto de ônibus já passou, lança exceção
+    elif trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
         raise HTTPException(status_code=400, detail="Bus stop has already passed")
 
+    # Define o status padrão dependendo do tipo da viagem
+    elif not trip_bus_stop:
+        status_padrao = TripBusStopStatusEnum.DESENBARQUE if trip.trip_type == TripTypeEnum.IDA else TripBusStopStatusEnum.A_CAMINHO
+        
+        # Cria um novo registro na tabela trip_bus_stop
+        new_trip_bus_stop = TripBusStopModel(
+            trip_id=student_trip.trip_id,
+            bus_stop_id=point_id,
+            status=status_padrao,  # Define o status padrão baseado no tipo da viagem
+            system_deleted=0  # Marca o novo ponto como ativo
+        )
+        db.add(new_trip_bus_stop)
+        db.commit()
+        db.refresh(new_trip_bus_stop)
+
+    # Atualiza o ponto de ônibus no registro de viagem do estudante
     student_trip.point_id = point_id
     db.commit()
     db.refresh(student_trip)
+
+    # Verifica se há outros estudantes vinculados ao ponto anterior **na mesma viagem**
+    student_count = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == student_trip.trip_id,  # Certifica que é a mesma viagem
+        StudentTripModel.point_id == old_point_id,  # Mesmo ponto de ônibus
+        StudentTripModel.system_deleted == 0
+    ).count()
+
+    # Exibe o valor de student_count no terminal
+    print(f"Number of students linked to bus stop {old_point_id} in trip {student_trip.trip_id}: {student_count}")
+
+    # Se não houver mais estudantes vinculados ao ponto anterior na mesma viagem, inativa o ponto
+    if student_count == 0:
+        old_trip_bus_stop = db.query(TripBusStopModel).filter(
+            TripBusStopModel.trip_id == student_trip.trip_id,  # Mesma viagem
+            TripBusStopModel.bus_stop_id == old_point_id  # Mesmo ponto de ônibus
+        ).first()
+
+        # Verifica se encontrou o registro correto
+        if not old_trip_bus_stop:
+            print(f"Trip bus stop with trip_id {student_trip.trip_id} and bus_stop_id {old_point_id} not found.")
+            raise HTTPException(status_code=404, detail="Trip bus stop not found")
+
+        # Exibe informações sobre o registro encontrado
+        print(f"Found TripBusStop with id {old_trip_bus_stop.id}, current system_deleted: {old_trip_bus_stop.system_deleted}")
+
+        # Inativa o ponto de ônibus e faz commit
+        old_trip_bus_stop.system_deleted = 1
+        db.commit()
+
+        # Verifica se o commit foi bem-sucedido
+        db.refresh(old_trip_bus_stop)
+        print(f"Updated TripBusStop {old_trip_bus_stop.id}, system_deleted is now {old_trip_bus_stop.system_deleted}")
+
     return student_trip
+
 
 @router.put("/{student_trip_id}/update_trip", response_model=StudentTrip)
 def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = Depends(get_db)):
