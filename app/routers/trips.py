@@ -15,6 +15,17 @@ router = APIRouter(
     tags=["Trips"]
 )
 
+@router.put("/{trip_id}/report_bus_issue", response_model=Trip)
+def report_bus_issue(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip.bus_issue = not trip.bus_issue  # Alterna o estado do problema do ônibus
+    db.commit()
+    db.refresh(trip)
+    return trip
+
 @router.post("/", response_model=Trip)
 def create_trip(trip: TripCreate, db: Session = Depends(get_db)):
     active_trip = db.query(TripModel).filter(
@@ -201,19 +212,26 @@ def get_trip_student_details(trip_id: int, db: Session = Depends(get_db)):
 
     return result
 
-@router.get("/{trip_id}/bus_stops", response_model=List[dict])
+@router.get("/{trip_id}/bus_stops", response_model=dict)
 def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
-    results = db.query(
+    trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    bus_stops = db.query(
         BusStop.name,
         TripBusStop.status
     ).join(
         TripBusStop, BusStop.id == TripBusStop.bus_stop_id
     ).filter(
         TripBusStop.trip_id == trip_id,
-        TripBusStop.system_deleted == 0  # Assume there's a flag for soft deletion
+        TripBusStop.system_deleted == 0  # Assume que há uma flag para soft deletion
     ).all()
 
-    if not results:
+    if not bus_stops:
         raise HTTPException(status_code=404, detail="No bus stops found for this trip")
 
-    return [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in results]
+    return {
+        "bus_issue": trip.bus_issue,  # Flag de problema no ônibus
+        "bus_stops": [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in bus_stops]
+    }

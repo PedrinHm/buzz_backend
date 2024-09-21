@@ -1,5 +1,5 @@
 # app/models/trip.py
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from ..config.database import Base
 from datetime import datetime
@@ -21,6 +21,9 @@ class Trip(Base):
     bus_id = Column(Integer, ForeignKey('buses.id'), nullable=False)
     driver_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     
+    # Novo campo para indicar problema no ônibus
+    bus_issue = Column(Boolean, default=False)
+
     system_deleted = Column(Integer, default=0)
     update_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     create_date = Column(DateTime, default=datetime.utcnow)

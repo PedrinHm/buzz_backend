@@ -1,3 +1,4 @@
+# app/schemas/trip.py
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -8,6 +9,7 @@ class TripBase(BaseModel):
     status: TripStatusEnum
     bus_id: int
     driver_id: int
+    bus_issue: bool = False  # Adicionado o campo de problema no ônibus
 
     class Config:
         use_enum_values = True
@@ -20,6 +22,7 @@ class TripUpdate(BaseModel):
     status: Optional[TripStatusEnum] = None
     bus_id: Optional[int] = None
     driver_id: Optional[int] = None
+    bus_issue: Optional[bool] = None  # Adicionado o campo de problema no ônibus
 
     class Config:
         use_enum_values = True
