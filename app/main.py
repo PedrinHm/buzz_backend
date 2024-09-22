@@ -9,6 +9,7 @@ from .models.user_type import UserType, UserTypeNames
 from .routers import users, buses, bus_stops, auth, trips, student_trips, trip_bus_stops, faculty
 from .models import bus, user, trip, student_trip, trip_bus_stop
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 load_dotenv()
 
@@ -28,10 +29,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite qualquer origem
+    allow_origins=["*"],  
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos (GET, POST, etc)
-    allow_headers=["*"],  # Permite todos os cabeçalhos
+    allow_methods=["*"],  
+    allow_headers=["*"],  
 )
 
 
@@ -63,3 +64,9 @@ async def startup_event():
     with SessionLocal() as session:
         create_user_types(session)  
 
+@app.get("/reset-password")
+def serve_reset_password_page():
+    file_path = os.path.join("app", "static", "reset_password.html")
+    if not os.path.exists(file_path):
+        raise RuntimeError(f"File at path {file_path} does not exist.")
+    return FileResponse(file_path)
