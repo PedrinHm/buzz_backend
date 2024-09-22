@@ -7,7 +7,6 @@ pydantic[email]
 pyrebase==3.0.27
 pytest==8.3.3
 python-dotenv==1.0.1
-python_bcrypt==0.3.2
 SQLAlchemy==2.0.35
-bcrypt==4.2.0
+bcrypt==3.2.0
 cryptography==42.0.7
