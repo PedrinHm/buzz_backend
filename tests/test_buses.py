@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from your_module.models.bus import BusCreate, BusUpdate
+from app.models.bus import BusCreate, BusUpdate
 
 # Teste 1: Verificar se o número de registro está sendo convertido para letras maiúsculas
 def test_uppercase_registration_number():

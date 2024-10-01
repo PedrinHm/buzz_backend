@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from your_module.models.faculty import FacultyCreate
+from app.models.faculty import FacultyCreate
 
 # Teste 1: Verificar a criação de uma Faculty com dados válidos
 def test_create_valid_faculty():
