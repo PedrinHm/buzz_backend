@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from your_module.models.bus_stop import BusStopCreate, BusStopUpdate
+from app.models.bus_stop import BusStopCreate, BusStopUpdate
 
 # Teste 1: Verificar a criação de um BusStop com dados válidos
 def test_create_valid_bus_stop():
