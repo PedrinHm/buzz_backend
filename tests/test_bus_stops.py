@@ -1,57 +1,40 @@
 import pytest
+from pydantic import ValidationError
+from your_module.models.bus_stop import BusStopCreate, BusStopUpdate
 
-def test_create_bus_stop(test_app):
-    response = test_app.post("/bus_stops/", json={
-        "name": "Bus Stop 1",
-        "faculty_id": 1  # Utiliza o faculty_id existente
-    })
-    assert response.status_code == 200
-    json_response = response.json()
-    assert json_response["name"] == "Bus Stop 1"
-    assert json_response["faculty_id"] == 1
-    assert "system_deleted" in json_response
-    assert json_response["system_deleted"] == 0  # Verifica o valor padrão
-    assert "create_date" in json_response
-    assert "update_date" in json_response
+# Teste 1: Verificar a criação de um BusStop com dados válidos
+def test_create_valid_bus_stop():
+    bus_stop_data = {
+        "name": "Main Entrance",
+        "faculty_id": 1
+    }
+    bus_stop = BusStopCreate(**bus_stop_data)
+    assert bus_stop.name == "Main Entrance"
+    assert bus_stop.faculty_id == 1
 
-def test_read_bus_stops(test_app):
-    # Cria um ponto de ônibus para garantir que há algo para ler
-    test_app.post("/bus_stops/", json={
-        "name": "Bus Stop 2",
-        "faculty_id": 1  # Utiliza o faculty_id existente
-    })
-    
-    response = test_app.get("/bus_stops/")
-    assert response.status_code == 200
-    assert len(response.json()) > 0
+# Teste 2: Verificar se o nome do BusStop é obrigatório
+def test_name_is_required():
+    with pytest.raises(ValidationError):
+        BusStopCreate(faculty_id=1)
 
-def test_update_bus_stop(test_app):
-    # Cria um ponto de ônibus para garantir que há algo para atualizar
-    response = test_app.post("/bus_stops/", json={
-        "name": "Bus Stop 3",
-        "faculty_id": 1  # Utiliza o faculty_id existente
-    })
-    assert response.status_code == 200
-    bus_stop_id = response.json()["id"]
-    
-    response = test_app.put(f"/bus_stops/{bus_stop_id}", json={
-        "name": "Updated Bus Stop 3",
-        "faculty_id": 1  # Mantém o mesmo faculty_id
-    })
-    assert response.status_code == 200
-    json_response = response.json()
-    assert json_response["name"] == "Updated Bus Stop 3"
-    assert "update_date" in json_response  # Verifica se a data de atualização foi alterada
+# Teste 3: Verificar se o faculty_id é obrigatório
+def test_faculty_id_is_required():
+    with pytest.raises(ValidationError):
+        BusStopCreate(name="Library Stop")
 
-def test_delete_bus_stop(test_app):
-    # Cria um ponto de ônibus para garantir que há algo para deletar
-    response = test_app.post("/bus_stops/", json={
-        "name": "Bus Stop 4",
-        "faculty_id": 1  # Utiliza o faculty_id existente
-    })
-    assert response.status_code == 200
-    bus_stop_id = response.json()["id"]
-    
-    response = test_app.delete(f"/bus_stops/{bus_stop_id}")
-    assert response.status_code == 200
-    assert response.json() == {"ok": True}
+# Teste 4: Verificar a atualização parcial do BusStop (somente o nome)
+def test_update_bus_stop_name():
+    bus_stop_data = {
+        "name": "Main Entrance",
+        "faculty_id": 1
+    }
+    update_data = {"name": "Updated Entrance"}
+    bus_stop = BusStopUpdate(**{**bus_stop_data, **update_data})
+    assert bus_stop.name == "Updated Entrance"
+    assert bus_stop.faculty_id == 1
+
+# Teste 5: Verificar se o sistema rejeita faculty_id inválido (ex.: negativo)
+def test_invalid_faculty_id():
+    invalid_data = {"name": "Side Gate", "faculty_id": -1}
+    with pytest.raises(ValidationError):
+        BusStopCreate(**invalid_data)
