@@ -37,16 +37,37 @@ def test_update_bus(mock_session):
     existing_bus = Bus(id=1, registration_number="ABC1234", name="Bus 1", capacity=50)
 
     session = mock_session()
-    # Simulando a chamada query().filter_by().first() para retornar o existing_bus
-    session.query(Bus).filter_by(id=1).first()
+    session.query.return_value.filter_by.return_value.first.return_value = existing_bus
 
-    # Ação: atualizar a capacidade do ônibus
-    existing_bus.capacity = 60
+    # Ação: simular a busca e atualização do ônibus
+    bus_to_update = session.query(Bus).filter_by(id=1).first()
+    bus_to_update.capacity = 60
 
     # Ação: commit das mudanças
     session.commit()
 
     # Verificações
+    session.query.assert_called_once_with(Bus)
     session.query.return_value.filter_by.assert_called_once_with(id=1)
-    assert existing_bus.capacity == 60
     session.commit.assert_called_once()
+    assert bus_to_update.capacity == 60
+
+def test_soft_delete_bus(mock_session):
+    # Simulando a exclusão lógica de um ônibus
+    existing_bus = Bus(id=1, registration_number="ABC1234", name="Bus 1", capacity=50, system_deleted=0)
+
+    session = mock_session()
+    session.query.return_value.filter_by.return_value.first.return_value = existing_bus
+
+    # Ação: marcar o ônibus como excluído (soft delete)
+    bus_to_delete = session.query(Bus).filter_by(id=1).first()
+    bus_to_delete.system_deleted = 1
+
+    # Ação: commit das mudanças
+    session.commit()
+
+    # Verificações
+    session.query.assert_called_once_with(Bus)
+    session.query.return_value.filter_by.assert_called_once_with(id=1)
+    session.commit.assert_called_once()
+    assert bus_to_delete.system_deleted == 1
