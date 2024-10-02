@@ -132,8 +132,6 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    
-    print(f"Trip Type: {trip.trip_type}, Status: {trip.status}")
 
     # Verificar se a viagem é uma viagem de volta e se está ativa
     if trip.trip_type != TripTypeEnum.VOLTA:
@@ -143,8 +141,15 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
 
     # Obter todos os pontos de ônibus associados à viagem
     bus_stops = db.query(TripBusStop).filter(TripBusStop.trip_id == trip_id).all()
-    
-    # Verificar se a condição de finalização é atendida
+
+    # Se não houver registros de trip_bus_stop, finalizar a viagem diretamente
+    if not bus_stops:
+        trip.status = TripStatusEnum.CONCLUIDA
+        db.commit()
+        db.refresh(trip)
+        return trip
+
+    # Verificar condições de finalização quando há registros de trip_bus_stop
     num_no_ponto = sum(1 for bus_stop in bus_stops if bus_stop.status == TripBusStopStatusEnum.NO_PONTO)
     num_ja_passou = sum(1 for bus_stop in bus_stops if bus_stop.status == TripBusStopStatusEnum.JA_PASSOU)
 
@@ -163,13 +168,12 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
             print(f"Alunos aguardando ou em aula no ponto {bus_stop.bus_stop_id}: {students_in_stop}")
             raise HTTPException(status_code=400, detail="Cannot finalize the trip while students are still waiting at any bus stop")
 
-    # Definir o status da viagem como "Concluída"
+    # Definir o status da viagem como "Concluída" se todas as condições forem atendidas
     trip.status = TripStatusEnum.CONCLUIDA
     db.commit()
     db.refresh(trip)
-    
-    return trip
 
+    return trip
 
 @router.get("/active/{driver_id}", response_model=Trip)
 def check_active_trip(driver_id: int, db: Session = Depends(get_db)):
