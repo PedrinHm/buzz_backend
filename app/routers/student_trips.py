@@ -219,10 +219,12 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
 
 @router.put("/{student_trip_id}/update_trip", response_model=StudentTrip)
 def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = Depends(get_db)):
+    # Busca pelo registro de student_trip
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
         raise HTTPException(status_code=404, detail="Student trip not found")
 
+    # Busca pela nova trip_id
     new_trip = db.query(TripModel).filter(TripModel.id == new_trip_id).first()
     if not new_trip:
         raise HTTPException(status_code=404, detail="New trip not found")
@@ -233,17 +235,40 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     if not check_capacity(new_trip.id, db):
         raise HTTPException(status_code=400, detail="New trip is full")
 
-    trip_bus_stop = db.query(TripBusStopModel).filter(
+    # Validações e atualização de trip_bus_stop
+    validate_and_update_trip_bus_stop(student_trip, db)
+
+    # Verificar se já existe um trip_bus_stop para a nova trip_id e point_id
+    new_trip_bus_stop = db.query(TripBusStopModel).filter(
         TripBusStopModel.trip_id == new_trip.id,
-        TripBusStopModel.bus_stop_id == student_trip.point_id
+        TripBusStopModel.bus_stop_id == student_trip.point_id,
+        TripBusStopModel.system_deleted == 0
     ).first()
 
-    if trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
-        raise HTTPException(status_code=400, detail="Bus stop has already passed")
+    # Se não existe, criar um novo trip_bus_stop com base no tipo da viagem (ida ou volta)
+    if not new_trip_bus_stop:
+        # Definir o status com base no tipo da viagem
+        if new_trip.trip_type == 1:  # Supondo que 'ida' e 'volta' sejam valores de trip_type
+            new_trip_bus_stop_status = TripBusStopStatusEnum.DESENBARQUE
+        elif new_trip.trip_type == 2:
+            new_trip_bus_stop_status = TripBusStopStatusEnum.A_CAMINHO
+        else:
+            raise HTTPException(status_code=400, detail="Invalid trip type")
 
+        # Criar o novo trip_bus_stop
+        new_trip_bus_stop = TripBusStopModel(
+            trip_id=new_trip.id,
+            bus_stop_id=student_trip.point_id,
+            status=new_trip_bus_stop_status
+        )
+        db.add(new_trip_bus_stop)
+        db.commit()
+
+    # Atualizar o student_trip para a nova trip_id
     student_trip.trip_id = new_trip.id
     db.commit()
     db.refresh(student_trip)
+
     return student_trip
 
 @router.get("/active/{student_id}", response_model=dict)
@@ -259,11 +284,44 @@ async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
 
     if not active_trip:
         raise HTTPException(status_code=404, detail="No active trip found for this student")
-    
-    # Retorna o student_trip_id junto com os outros detalhes
+
     return {
-        "student_trip_id": active_trip.id,  # Adiciona o ID do student_trip
+        "student_trip_id": active_trip.id,
         "trip_id": active_trip.trip.id,
         "trip_type": TripTypeEnum(active_trip.trip.trip_type).name,
         "trip_status": TripStatusEnum(active_trip.trip.status).name
     }
+
+def validate_and_update_trip_bus_stop(student_trip: StudentTripModel, db: Session):
+    # Consulta na tabela student_trip para encontrar registros com mesmo trip_id e point_id que não estejam deletados
+    matching_trips = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == student_trip.trip_id,
+        StudentTripModel.point_id == student_trip.point_id,
+        StudentTripModel.system_deleted == 0  # Ignorar registros deletados
+    ).all()
+
+    # Print da lista de matching_trips com detalhes
+    print("Lista de matching_trips:")
+    for trip in matching_trips:
+        print(f"ID: {trip.id}, Trip ID: {trip.trip_id}, Point ID: {trip.point_id}, Status: {trip.status}")
+
+    # Se retornar apenas o próprio registro de referência ou se houver um registro válido
+    if len(matching_trips) == 1 and matching_trips[0].id == student_trip.id:
+        # Verificar se o trip_bus_stop correspondente que não está deletado existe
+        trip_bus_stop = db.query(TripBusStopModel).filter(
+            TripBusStopModel.trip_id == student_trip.trip_id,
+            TripBusStopModel.bus_stop_id == student_trip.point_id,
+            TripBusStopModel.system_deleted == 0  # Considerar apenas o não deletado
+        ).first()
+
+        if trip_bus_stop:
+            print(f"Atualizando system_deleted para o trip_bus_stop ID: {trip_bus_stop.id}")
+            trip_bus_stop.system_deleted = 1
+            db.commit()
+            db.refresh(trip_bus_stop)  # Atualiza o objeto para garantir que o valor foi persistido
+        else:
+            print("Nenhum trip_bus_stop não deletado encontrado para esta combinação de trip_id e bus_stop_id")
+    else:
+        print("Mais de um matching_trips encontrado ou o ID de referência não corresponde.")
+
+    return
