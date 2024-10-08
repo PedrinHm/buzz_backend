@@ -103,7 +103,12 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(new_trip_bus_stop)
 
-    return trip
+    # Return the original trip with the new return trip ID
+    response = trip.__dict__
+    response['new_trip_id'] = return_trip.id
+
+    return response
+
 
 @router.get("/", response_model=List[Trip])
 def read_trips(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
