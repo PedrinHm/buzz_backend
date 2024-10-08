@@ -48,7 +48,7 @@ def create_trip(trip: TripCreate, db: Session = Depends(get_db)):
     db.refresh(db_trip)
     return db_trip
 
-@router.put("/{trip_id}/finalizar_ida", response_model=Trip)
+@router.put("/{trip_id}/finalizar_ida")
 def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
@@ -103,11 +103,24 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(new_trip_bus_stop)
 
-    # Return the original trip with the new return trip ID
-    response = trip.__dict__
-    response['new_trip_id'] = return_trip.id
+    # Construir a resposta que inclui o ID da nova viagem de volta
+    response = {
+        "trip": {
+            "trip_type": trip.trip_type,
+            "status": trip.status,
+            "bus_id": trip.bus_id,
+            "driver_id": trip.driver_id,
+            "bus_issue": trip.bus_issue,
+            "id": trip.id,
+            "system_deleted": trip.system_deleted,
+            "update_date": trip.update_date,
+            "create_date": trip.create_date
+        },
+        "new_trip_id": return_trip.id
+    }
 
     return response
+
 
 
 @router.get("/", response_model=List[Trip])
