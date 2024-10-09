@@ -12,3 +12,4 @@ SQLAlchemy==2.0.35
 bcrypt==3.2.0
 cryptography==42.0.7
 httpx
+firebase-admin
