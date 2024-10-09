@@ -6,8 +6,6 @@ router = APIRouter(
     tags=["notifications"]
 )
 
-router = APIRouter()
-
 @router.post("/send-notification/")
 async def notify_user(token: str, title: str, message: str):
     try:

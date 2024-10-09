@@ -1,26 +1,28 @@
-import httpx
+import firebase_admin
+from firebase_admin import credentials, messaging
+import os
+import json
 from fastapi import HTTPException
 
-# Defina a URL e a chave do servidor FCM
-FCM_SERVER_KEY = 'BMNwFmQ0n47NfSNvlnR53Snqbh37sJhpX4p3jIPQhcNUSYaznnhy95sqIVtDm3ylSsvBwJ0y2UsWg-3dCY-llTM'  
-FCM_URL = 'https://fcm.googleapis.com/fcm/send'
+firebase_credentials = os.getenv('FIREBASE_CREDENTIALS_JSON')
+cred_dict = json.loads(firebase_credentials)
+cred = credentials.Certificate(cred_dict)
+
+firebase_admin.initialize_app(cred)
 
 async def send_push_notification(token: str, title: str, body: str):
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'key={FCM_SERVER_KEY}',
-    }
-    payload = {
-        'to': token,
-        'notification': {
-            'title': title,
-            'body': body,
-        },
-        'priority': 'high',
-    }
+    # Cria a mensagem de notificação
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=title,
+            body=body,
+        ),
+        token=token,
+    )
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(FCM_URL, json=payload, headers=headers)
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Failed to send notification")
-        return response.json()
+    # Envia a notificação usando o Firebase Admin SDK
+    try:
+        response = messaging.send(message)
+        return {"success": True, "message_id": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send notification: {str(e)}")
