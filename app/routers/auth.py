@@ -68,6 +68,10 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+class UpdateDeviceTokenRequest(BaseModel):
+    user_id: int
+    device_token: str
+
 def get_db():
     db = SessionLocal()
     try:
@@ -137,3 +141,15 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     db.commit()
 
     return {"message": "Your password has been reset successfully."}
+
+@router.put("/update-device-token")
+async def update_device_token(request: UpdateDeviceTokenRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == request.user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.device_token = request.device_token
+    db.commit()
+
+    return {"status": "success", "message": "Device token updated successfully"}

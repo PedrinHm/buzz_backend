@@ -22,6 +22,7 @@ class UserBase(BaseModel):
     cpf: Optional[str] = None
     phone: Optional[str] = None
     faculty_id: Optional[int] = None
+    device_token: Optional[str] = None
 
     @validator('phone')
     def validate_phone(cls, v):
@@ -53,6 +54,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     password: Optional[str] = None
     faculty_id: Optional[int] = None
+    device_token: Optional[str] = None
 
     @validator('phone', check_fields=False)
     def validate_phone(cls, v):
@@ -82,7 +84,7 @@ class UserInDBBase(UserBase):
     phone: str
     user_type_id: int
     profile_picture: Optional[str] = None
-    faculty_name: Optional[str] = None  # Adiciona o nome da faculdade
+    faculty_name: Optional[str] = None  
 
     class Config:
         orm_mode = True
