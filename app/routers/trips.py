@@ -172,17 +172,25 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     if not (num_ja_passou == len(bus_stops) or (num_no_ponto == 1 and num_ja_passou == len(bus_stops) - 1)):
         raise HTTPException(status_code=400, detail="Conditions not met to finalize the trip")
 
-    # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" em qualquer um dos pontos de ônibus
+    # Verificar se há alunos com status "Presente", "Em aula" ou "Aguardando ônibus" em qualquer um dos pontos de ônibus
     for bus_stop in bus_stops:
         students_in_stop = db.query(StudentTripModel).filter(
             StudentTripModel.trip_id == trip_id,
             StudentTripModel.point_id == bus_stop.bus_stop_id,
-            StudentTripModel.status.in_([StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA])
+            StudentTripModel.status.in_([
+                StudentStatusEnum.PRESENTE,
+                StudentStatusEnum.EM_AULA,
+                StudentStatusEnum.AGUARDANDO_NO_PONTO
+            ])
         ).all()
 
-        if students_in_stop:
-            print(f"Alunos aguardando ou em aula no ponto {bus_stop.bus_stop_id}: {students_in_stop}")
-            raise HTTPException(status_code=400, detail="Cannot finalize the trip while students are still waiting at any bus stop")
+        # Se não houver alunos com os status relevantes, continue para o próximo ponto de ônibus
+        if not students_in_stop:
+            continue
+
+        # Se encontrar alunos com status relevantes, não permitir finalizar a viagem
+        print(f"Alunos presentes, em aula ou aguardando no ponto {bus_stop.bus_stop_id}: {students_in_stop}")
+        raise HTTPException(status_code=400, detail="Cannot finalize the trip while students are still at any bus stop with relevant statuses")
 
     # Definir o status da viagem como "Concluída" se todas as condições forem atendidas
     trip.status = TripStatusEnum.CONCLUIDA
@@ -190,6 +198,7 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     db.refresh(trip)
 
     return trip
+
 
 @router.get("/active/{driver_id}", response_model=Trip)
 def check_active_trip(driver_id: int, db: Session = Depends(get_db)):
