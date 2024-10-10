@@ -53,7 +53,7 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    
+
     if trip.status != TripStatusEnum.ATIVA or trip.trip_type != TripTypeEnum.IDA:
         raise HTTPException(status_code=400, detail="Trip is not an active 'ida' trip.")
 
@@ -71,17 +71,18 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(return_trip)
 
-    # Update student trips
     student_trips = db.query(StudentTripModel).filter(StudentTripModel.trip_id == trip.id).all()
     for student_trip in student_trips:
-        student_trip.status = StudentStatusEnum.EM_AULA
+        if student_trip.status == StudentStatusEnum.FILA_DE_ESPERA:
+            student_trip.status = StudentStatusEnum.FILA_DE_ESPERA
+        else:
+            student_trip.status = StudentStatusEnum.EM_AULA
         db.commit()
 
-        # Add students to the return trip
         db_student_trip = StudentTripModel(
             trip_id=return_trip.id,
             student_id=student_trip.student_id,
-            status=StudentStatusEnum.EM_AULA,
+            status=student_trip.status, 
             point_id=student_trip.point_id
         )
         db.add(db_student_trip)
@@ -103,7 +104,6 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(new_trip_bus_stop)
 
-    # Construir a resposta que inclui o ID da nova viagem de volta
     response = {
         "trip": {
             "trip_type": trip.trip_type,
@@ -120,8 +120,6 @@ def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
     }
 
     return response
-
-
 
 @router.get("/", response_model=List[Trip])
 def read_trips(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
