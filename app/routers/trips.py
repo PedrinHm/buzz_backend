@@ -238,14 +238,14 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Lista de status permitidos
+    # Lista de status permitidos para os alunos
     allowed_student_statuses = [
         StudentStatusEnum.PRESENTE,
         StudentStatusEnum.EM_AULA,
         StudentStatusEnum.AGUARDANDO_NO_PONTO
     ]
 
-    # Consulta para buscar as paradas de ônibus que possuem alunos com status permitido
+    # Consulta para buscar as paradas de ônibus que possuem alunos com status permitido e o mesmo trip_id
     bus_stops = db.query(
         BusStop.name,
         TripBusStop.status
@@ -254,7 +254,8 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
     ).join(
         StudentTripModel, StudentTripModel.point_id == TripBusStop.bus_stop_id
     ).filter(
-        TripBusStop.trip_id == trip_id,
+        TripBusStop.trip_id == trip_id,  # Garante que o trip_id seja o mesmo em TripBusStop
+        StudentTripModel.trip_id == trip_id,  # Garante que o trip_id seja o mesmo em StudentTripModel
         TripBusStop.system_deleted == 0,  # Filtra apenas paradas não deletadas
         StudentTripModel.status.in_(allowed_student_statuses),  # Verifica os status dos alunos
         StudentTripModel.system_deleted == 0  # Filtra apenas student_trips não deletados
