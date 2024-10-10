@@ -218,7 +218,7 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
 
 
 @router.put("/{student_trip_id}/update_trip", response_model=StudentTrip)
-def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = Depends(get_db)):
+def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = Depends(get_db), waitlist: bool = False):
     # Busca pelo registro de student_trip
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
@@ -232,8 +232,12 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     if new_trip.status != TripStatusEnum.ATIVA:
         raise HTTPException(status_code=400, detail="New trip is not active")
 
+    # Verifica a capacidade e trata a lógica da fila de espera
     if not check_capacity(new_trip.id, db):
-        raise HTTPException(status_code=400, detail="New trip is full")
+        if waitlist:
+            student_trip.status = StudentStatusEnum.FILA_DE_ESPERA
+        else:
+            raise HTTPException(status_code=400, detail="New trip is full")
 
     # Validações e atualização de trip_bus_stop
     validate_and_update_trip_bus_stop(student_trip, db)
@@ -247,7 +251,6 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
 
     # Se não existe, criar um novo trip_bus_stop com base no tipo da viagem (ida ou volta)
     if not new_trip_bus_stop:
-        # Definir o status com base no tipo da viagem
         if new_trip.trip_type == 1:  # Supondo que 'ida' e 'volta' sejam valores de trip_type
             new_trip_bus_stop_status = TripBusStopStatusEnum.DESENBARQUE
         elif new_trip.trip_type == 2:
@@ -255,7 +258,6 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
         else:
             raise HTTPException(status_code=400, detail="Invalid trip type")
 
-        # Criar o novo trip_bus_stop
         new_trip_bus_stop = TripBusStopModel(
             trip_id=new_trip.id,
             bus_stop_id=student_trip.point_id,
@@ -270,6 +272,7 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     db.refresh(student_trip)
 
     return student_trip
+
 
 @router.get("/active/{student_id}", response_model=dict)
 async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
