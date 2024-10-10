@@ -138,13 +138,26 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
 
 @router.get("/pontos_a_caminho/{trip_id}", response_model=List[dict])
 def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
+    # Lista de status permitidos para os alunos
+    allowed_student_statuses = [
+        StudentStatusEnum.PRESENTE,
+        StudentStatusEnum.EM_AULA,
+        StudentStatusEnum.AGUARDANDO_NO_PONTO
+    ]
+
+    # Consulta para buscar as paradas de ônibus que estão "A caminho" e possuem alunos com status permitido
     stops_on_the_way = db.query(TripBusStopModel).options(
         joinedload(TripBusStopModel.bus_stop)  # Fazendo o join com a tabela de pontos de ônibus
+    ).join(
+        StudentTripModel, StudentTripModel.point_id == TripBusStopModel.bus_stop_id
     ).filter(
-        TripBusStopModel.trip_id == trip_id,
+        TripBusStopModel.trip_id == trip_id,  # Garante que o trip_id seja o mesmo em TripBusStop
+        StudentTripModel.trip_id == trip_id,  # Garante que o trip_id seja o mesmo em StudentTripModel
         TripBusStopModel.status == TripBusStopStatusEnum.A_CAMINHO,
-        TripBusStopModel.system_deleted == 0
-    ).all()
+        TripBusStopModel.system_deleted == 0,  # Filtra apenas paradas não deletadas
+        StudentTripModel.status.in_(allowed_student_statuses),  # Verifica os status dos alunos
+        StudentTripModel.system_deleted == 0  # Filtra apenas student_trips não deletados
+    ).distinct().all()  # Usando distinct() para evitar duplicatas
 
     if not stops_on_the_way:
         raise HTTPException(status_code=404, detail="No stops on the way found")
@@ -161,6 +174,7 @@ def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
     ]
 
     return result
+
 
 @router.put("/finalizar_ponto_atual/{trip_id}", response_model=TripBusStop)
 def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
