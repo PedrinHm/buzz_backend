@@ -55,6 +55,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     faculty_id: Optional[int] = None
     device_token: Optional[str] = None
+    name: Optional[str] = None  # Adicionado para permitir a edição do nome
 
     @validator('phone', check_fields=False)
     def validate_phone(cls, v):
@@ -72,6 +73,7 @@ class UserUpdate(BaseModel):
         if v and not validate_cpf(v):
             raise ValueError("Invalid CPF")
         return v
+
 
 class UserProfilePicture(BaseModel):
     picture: str
