@@ -89,9 +89,10 @@ def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(ge
             if var == "password":
                 db_user.set_password(value)
             else:
-                setattr(db_user, var, value)
+                setattr(db_user, var, value)  # Atualiza o campo `name` se ele estiver no payload
     db.commit()
     return db_user
+
 
 @router.put("/{user_id}/profile-picture", response_model=schemas.User)
 def update_profile_picture(user_id: int, profile_picture: schemas.UserProfilePicture, db: Session = Depends(get_db)):

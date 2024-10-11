@@ -39,11 +39,30 @@ def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEn
         if not check_capacity(student_trip.trip_id, db):
             raise HTTPException(status_code=400, detail="Bus capacity exceeded")
 
+    # Se o novo status for "NAO_VOLTARA", enviar notificação para os alunos na "FILA_DE_ESPERA"
+    if new_status == StudentStatusEnum.NAO_VOLTARA:
+        notify_students_in_waiting_list(student_trip.trip_id, db)
+
     # Atualiza o status do aluno
     student_trip.status = new_status
     db.commit()
     db.refresh(student_trip)
     return student_trip
+
+def notify_students_in_waiting_list(trip_id: int, db: Session):
+    students_in_waiting_list = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == trip_id,
+        StudentTripModel.status == StudentStatusEnum.FILA_DE_ESPERA
+    ).all()
+
+    for student in students_in_waiting_list:
+        user = db.query(User).filter(User.id == student.student_id).first()
+        if user and user.device_token:
+            # Envia a notificação para o aluno com status "FILA_DE_ESPERA"
+            title = "Vaga disponível!"
+            message = "Uma vaga no ônibus foi liberada. Verifique se você pode ser alocado."
+            notify_user(user.device_token, title, message)
+
     
 def check_capacity(trip_id: int, db: Session) -> bool:
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
@@ -62,7 +81,7 @@ def check_capacity(trip_id: int, db: Session) -> bool:
     return capacity < bus_capacity
 
 @router.post("/", response_model=StudentTrip)
-def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(get_db)):
+def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(get_db), waitlist: bool = False):
     trip = db.query(TripModel).filter(TripModel.id == student_trip.trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -75,15 +94,22 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
     if existing_trip:
         raise HTTPException(status_code=400, detail="Aluno já cadastrado nesta viagem")
     
-    # Verificar capacidade do ônibus
+    # Verificar capacidade do ônibus e adicionar à fila de espera se necessário
     if not check_capacity(trip.id, db):
-        raise HTTPException(status_code=400, detail="Capacidade do ônibus atingida")
+        if waitlist:
+            # Coloca o aluno na fila de espera se a capacidade estiver cheia
+            student_status = StudentStatusEnum.FILA_DE_ESPERA
+        else:
+            raise HTTPException(status_code=400, detail="Capacidade do ônibus atingida")
+    else:
+        # Define o status inicial com base no tipo da viagem
+        student_status = StudentStatusEnum.PRESENTE if trip.trip_type == TripTypeEnum.IDA else StudentStatusEnum.EM_AULA
     
-    # Criar a viagem do estudante
+    # Criar a viagem do estudante com o status apropriado
     db_student_trip = StudentTripModel(
         trip_id=student_trip.trip_id,
         student_id=student_trip.student_id,
-        status=StudentStatusEnum.PRESENTE if trip.trip_type == TripTypeEnum.IDA else StudentStatusEnum.EM_AULA,
+        status=student_status,
         point_id=student_trip.point_id
     )
     db.add(db_student_trip)
@@ -106,6 +132,7 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
         db.commit()
 
     return db_student_trip
+
 
 
 @router.get("/", response_model=List[StudentTrip])
