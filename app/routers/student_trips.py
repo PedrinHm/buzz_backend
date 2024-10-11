@@ -82,29 +82,40 @@ def check_capacity(trip_id: int, db: Session) -> bool:
 
 @router.post("/", response_model=StudentTrip)
 def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(get_db), waitlist: bool = False):
+    print("Iniciando a criação do student_trip...")
+
     trip = db.query(TripModel).filter(TripModel.id == student_trip.trip_id).first()
     if not trip:
+        print("Erro: Trip not found")
         raise HTTPException(status_code=404, detail="Trip not found")
     
+    print("Viagem encontrada. Verificando se o aluno já está cadastrado...")
     # Verificar se o aluno já está cadastrado na viagem
     existing_trip = db.query(StudentTripModel).filter(
         StudentTripModel.trip_id == student_trip.trip_id,
         StudentTripModel.student_id == student_trip.student_id
     ).first()
     if existing_trip:
+        print("Erro: Aluno já cadastrado nesta viagem")
         raise HTTPException(status_code=400, detail="Aluno já cadastrado nesta viagem")
     
+    print("Aluno não está cadastrado na viagem. Verificando a capacidade do ônibus...")
     # Verificar capacidade do ônibus e adicionar à fila de espera se necessário
     if not check_capacity(trip.id, db):
+        print("Capacidade do ônibus atingida.")
         if waitlist:
+            print("Aluno será colocado na fila de espera.")
             # Coloca o aluno na fila de espera se a capacidade estiver cheia
             student_status = StudentStatusEnum.FILA_DE_ESPERA
         else:
-            raise HTTPException(status_code=400, detail="Capacidade do ônibus atingida")
+            print("Erro: Capacidade do onibus atingida.")
+            raise HTTPException(status_code=400, detail="Capacidade do onibus atingida")
     else:
+        print("Capacidade do ônibus disponível. Aluno será adicionado com status inicial.")
         # Define o status inicial com base no tipo da viagem
         student_status = StudentStatusEnum.PRESENTE if trip.trip_type == TripTypeEnum.IDA else StudentStatusEnum.EM_AULA
     
+    print("Criando a viagem do estudante...")
     # Criar a viagem do estudante com o status apropriado
     db_student_trip = StudentTripModel(
         trip_id=student_trip.trip_id,
@@ -116,6 +127,7 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
     db.commit()
     db.refresh(db_student_trip)
     
+    print("Criando ou atualizando TripBusStop...")
     # Criar ou atualizar TripBusStop
     trip_bus_stop = db.query(TripBusStopModel).filter(
         TripBusStopModel.trip_id == trip.id,
@@ -131,7 +143,9 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
         db.add(new_trip_bus_stop)
         db.commit()
 
+    print("Student trip criado com sucesso!")
     return db_student_trip
+
 
 
 
