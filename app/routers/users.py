@@ -110,3 +110,15 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user.system_deleted = 1
     db.commit()
     return {"ok": True}
+
+@router.delete("/{user_id}/profile-picture", response_model=schemas.User)
+def delete_profile_picture(user_id: int, db: Session = Depends(get_db)):
+    db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Remove a foto de perfil definindo o campo como None
+    db_user.profile_picture = None
+    db.commit()
+    db.refresh(db_user)
+    return db_user
