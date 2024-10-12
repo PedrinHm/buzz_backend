@@ -6,6 +6,7 @@ from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatus
 from ..models.trip import Trip as TripModel, TripStatusEnum, TripTypeEnum
 from ..models.trip_bus_stop import TripBusStop as TripBusStopModel, TripBusStopStatusEnum
 from ..models.bus import Bus as BusModel
+from ..models.user import User  
 from ..schemas.student_trip import StudentTripCreate, StudentTrip, StudentTripUpdate
 from typing import List
 
