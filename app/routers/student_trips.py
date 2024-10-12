@@ -17,7 +17,7 @@ router = APIRouter(
 )
 
 @router.put("/{student_trip_id}/update_status", response_model=StudentTrip)
-def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEnum, db: Session = Depends(get_db)):
+async def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEnum, db: Session = Depends(get_db)):
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
         raise HTTPException(status_code=404, detail="Student trip not found")
@@ -43,13 +43,14 @@ def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEn
 
     # Se o novo status for "NAO_VOLTARA", enviar notificação para os alunos na "FILA_DE_ESPERA"
     if new_status == StudentStatusEnum.NAO_VOLTARA:
-        notify_students_in_waiting_list(student_trip.trip_id, db)
+        await notify_students_in_waiting_list(student_trip.trip_id, db)
 
     # Atualiza o status do aluno
     student_trip.status = new_status
     db.commit()
     db.refresh(student_trip)
     return student_trip
+
 
 async def notify_students_in_waiting_list(trip_id: int, db: Session):
     students_in_waiting_list = db.query(StudentTripModel).filter(
