@@ -61,7 +61,7 @@ async def notify_students_in_waiting_list(trip_id: int, db: Session):
     for student in students_in_waiting_list:
         user = db.query(User).filter(User.id == student.student_id).first()
         if user and user.device_token:
-            # Envia a notificação para o aluno com status "FILA_DE_ESPERA"
+            print(f"Sending notification to token: {user.device_token}")
             title = "Vaga disponível!"
             message = "Uma vaga no ônibus foi liberada. Verifique se você pode ser alocado."
             await notify_user(user.device_token, title, message)

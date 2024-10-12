@@ -15,14 +15,22 @@ router = APIRouter(
 
 @router.get("/available_for_student", response_model=List[dict])
 def get_available_buses_for_student(student_id: int = Query(...), db: Session = Depends(get_db)):
-    # Buscar o trip_id atual do aluno
-    current_trip = db.query(StudentTripModel).filter(
+
+    # Buscar o trip_id atual do aluno e garantir que ele está relacionado corretamente com a trip
+    current_trip = db.query(StudentTripModel).join(TripModel, StudentTripModel.trip_id == TripModel.id).filter(
         StudentTripModel.student_id == student_id,
-        StudentTripModel.system_deleted == 0
+        StudentTripModel.system_deleted == 0,
+        TripModel.status == 1  # Aqui estou assumindo que 1 é o status ativo, ajuste conforme necessário
     ).first()
 
     if not current_trip:
+        print("Nenhuma viagem encontrada para o aluno.")
         raise HTTPException(status_code=404, detail="Student trip not found")
+    
+    # Verificar se a trip associada ao aluno é válida
+    if not current_trip.trip:
+        print("Nenhuma viagem associada ao StudentTrip.")
+        raise HTTPException(status_code=404, detail="Student's associated trip not found")
 
     # Obter ônibus em viagens ativas, excluindo o ônibus que o aluno está vinculado
     active_buses = db.query(
@@ -38,11 +46,12 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
         BusModel.system_deleted == 0,
         TripModel.bus_id != current_trip.trip.bus_id  # Exclui o ônibus vinculado ao aluno
     ).all()
-
+    
     if not active_buses:
+        print("Nenhum ônibus ativo encontrado.")
         raise HTTPException(status_code=404, detail="No active buses found")
 
-    return [
+    result = [
         {
             "bus_id": bus_id,
             "trip_id": trip_id,
@@ -53,6 +62,10 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
         }
         for bus_id, registration_number, name, capacity, trip_id, trip_type in active_buses
     ]
+    
+    return result
+
+
 
 @router.post("/", response_model=schemas.Bus)
 def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
