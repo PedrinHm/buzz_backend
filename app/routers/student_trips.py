@@ -8,6 +8,7 @@ from ..models.trip_bus_stop import TripBusStop as TripBusStopModel, TripBusStopS
 from ..models.bus import Bus as BusModel
 from ..models.user import User  
 from ..schemas.student_trip import StudentTripCreate, StudentTrip, StudentTripUpdate
+from ..routers.notifications import notify_user
 from typing import List
 
 router = APIRouter(
