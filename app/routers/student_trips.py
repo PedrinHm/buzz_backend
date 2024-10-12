@@ -51,7 +51,7 @@ def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEn
     db.refresh(student_trip)
     return student_trip
 
-def notify_students_in_waiting_list(trip_id: int, db: Session):
+async def notify_students_in_waiting_list(trip_id: int, db: Session):
     students_in_waiting_list = db.query(StudentTripModel).filter(
         StudentTripModel.trip_id == trip_id,
         StudentTripModel.status == StudentStatusEnum.FILA_DE_ESPERA
