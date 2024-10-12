@@ -63,7 +63,7 @@ def notify_students_in_waiting_list(trip_id: int, db: Session):
             # Envia a notificação para o aluno com status "FILA_DE_ESPERA"
             title = "Vaga disponível!"
             message = "Uma vaga no ônibus foi liberada. Verifique se você pode ser alocado."
-            notify_user(user.device_token, title, message)
+            await notify_user(user.device_token, title, message)
 
     
 def check_capacity(trip_id: int, db: Session) -> bool:
