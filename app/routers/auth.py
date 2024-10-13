@@ -102,7 +102,8 @@ async def login(login_data: LoginData, db: Session = Depends(get_db)):
             
             # Verificar se é o primeiro login
             if user.first_login == "true":
-                return {"status": "first_login", "id": user.id}
+                # Retornar um valor de user_type_id válido para atender ao LoginResponse
+                return {"status": "first_login", "user_type_id": user.user_type_id, "id": user.id}
             
             return {"status": "success", "user_type_id": user.user_type_id, "id": user.id}
         else:
