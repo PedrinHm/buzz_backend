@@ -69,7 +69,6 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
 
 @router.post("/", response_model=schemas.Bus)
 def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
-    # Verifica se o número de registro ou nome já estão registrados
     db_bus = db.query(BusModel).filter(
         ((BusModel.registration_number == bus.registration_number.upper()) |
          (BusModel.name == bus.name)) &
@@ -81,7 +80,6 @@ def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
         if db_bus.name == bus.name:
             raise HTTPException(status_code=400, detail="Bus name already registered")
     
-    # Verifica se o ônibus está deletado e reativa-o, se necessário
     db_bus_deleted = db.query(BusModel).filter(
         ((BusModel.registration_number == bus.registration_number.upper()) |
          (BusModel.name == bus.name)) &
@@ -96,9 +94,8 @@ def create_bus(bus: schemas.BusCreate, db: Session = Depends(get_db)):
         db.refresh(db_bus_deleted)
         return db_bus_deleted
 
-    # Cria um novo ônibus
     new_bus = BusModel(
-        registration_number=bus.registration_number.upper(),  # Aplica o upper case
+        registration_number=bus.registration_number.upper(),
         name=bus.name,
         capacity=bus.capacity
     )
@@ -116,7 +113,7 @@ def read_buses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 def read_available_buses(db: Session = Depends(get_db)):
     buses = db.query(BusModel).filter(
         BusModel.system_deleted == 0,
-        ~db.query(models.Trip).filter(models.Trip.bus_id == BusModel.id, models.Trip.status == 1).exists()
+        ~db.query(models.Trip).filter(models.Trip.bus_id == BusModel.id, models.Trip.status == 1, models.Trip.system_deleted == 0).exists()
     ).all()
     return buses
 
