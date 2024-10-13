@@ -180,7 +180,6 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
             StudentTripModel.trip_id == trip_id,
             StudentTripModel.point_id == bus_stop.bus_stop_id,
             StudentTripModel.status.in_([
-                StudentStatusEnum.PRESENTE,
                 StudentStatusEnum.EM_AULA,
                 StudentStatusEnum.AGUARDANDO_NO_PONTO
             ])
