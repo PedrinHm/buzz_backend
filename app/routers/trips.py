@@ -282,3 +282,31 @@ def get_trip_bus_stops(trip_id: int, db: Session = Depends(get_db)):
         "bus_issue": trip.bus_issue,  # Flag de problema no ônibus
         "bus_stops": [{"name": name, "status": TripBusStopStatusEnum(status).label()} for name, status in bus_stops]
     }
+
+@router.delete("/{trip_id}/cancel", response_model=dict)
+def cancel_trip(trip_id: int, db: Session = Depends(get_db)):
+    # Verificar se a viagem existe
+    trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Verificar se existem registros vinculados à viagem em 'student_trip' e 'trip_bus_stop' com system_deleted = 0
+    active_student_trips = db.query(StudentTripModel).filter(
+        StudentTripModel.trip_id == trip_id,
+        StudentTripModel.system_deleted == 0
+    ).first()
+
+    active_trip_bus_stops = db.query(TripBusStop).filter(
+        TripBusStop.trip_id == trip_id,
+        TripBusStop.system_deleted == 0
+    ).first()
+
+    # Se houver registros ativos vinculados à viagem, não permitir o cancelamento
+    if active_student_trips or active_trip_bus_stops:
+        raise HTTPException(status_code=400, detail="Cannot cancel trip with active student or bus stop records")
+
+    # Marcar a viagem como cancelada (atualizar o campo system_deleted)
+    trip.system_deleted = 1
+    db.commit()
+
+    return {"status": "Trip canceled successfully"}
