@@ -99,6 +99,11 @@ async def login(login_data: LoginData, db: Session = Depends(get_db)):
     if user:
         if user.verify_password(login_data.password):
             login_attempts[email] = []  # Resetar tentativas após login bem-sucedido
+            
+            # Verificar se é o primeiro login
+            if user.first_login == "true":
+                return {"status": "first_login", "id": user.id}
+            
             return {"status": "success", "user_type_id": user.user_type_id, "id": user.id}
         else:
             login_attempts.setdefault(email, []).append(now)
@@ -153,3 +158,17 @@ async def update_device_token(request: UpdateDeviceTokenRequest, db: Session = D
     db.commit()
 
     return {"status": "success", "message": "Device token updated successfully"}
+
+@router.post("/set-new-password")
+async def set_new_password(user_id: int, new_password: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Atualiza a senha do usuário
+    user.set_password(new_password)
+    user.first_login = "false"  # Após a redefinição, marque o primeiro login como falso
+    db.commit()
+
+    return {"status": "success", "message": "Password updated successfully"}
