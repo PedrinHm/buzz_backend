@@ -72,6 +72,11 @@ class UpdateDeviceTokenRequest(BaseModel):
     user_id: int
     device_token: str
 
+class SetNewPasswordRequest(BaseModel):
+    user_id: int
+    new_password: str
+
+
 def get_db():
     db = SessionLocal()
     try:
