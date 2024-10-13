@@ -145,27 +145,35 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
 @router.put("/{trip_id}/finalizar_volta", response_model=Trip)
 def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     # Obter a viagem do banco de dados
+    print(f"Recebido trip_id: {trip_id}")
+    
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
+    print(f"Trip encontrada: {trip}")
+
     if not trip:
+        print("Viagem não encontrada")
         raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Verificar se a viagem é uma viagem de volta e se está ativa
+    print(f"Tipo da viagem: {trip.trip_type}, Status da viagem: {trip.status}")
+
     if trip.trip_type != TripTypeEnum.VOLTA:
+        print("Viagem não é do tipo VOLTA")
         raise HTTPException(status_code=400, detail="Trip is not a return trip")
     if trip.status != TripStatusEnum.ATIVA:
+        print("Viagem não está ativa")
         raise HTTPException(status_code=400, detail="Trip is not active")
 
-    # Obter todos os pontos de ônibus associados à viagem
     bus_stops = db.query(TripBusStop).filter(TripBusStop.trip_id == trip_id).all()
+    print(f"Paradas de ônibus encontradas: {bus_stops}")
 
-    # Se não houver registros de trip_bus_stop, finalizar a viagem diretamente
     if not bus_stops:
+        print("Nenhuma parada de ônibus encontrada, finalizando viagem")
         trip.status = TripStatusEnum.CONCLUIDA
         db.commit()
         db.refresh(trip)
+        print(f"Viagem {trip_id} concluída")
         return trip
 
-    # Filtrar os pontos de ônibus que possuem alunos com os status relevantes
     filtered_bus_stops = []
     for bus_stop in bus_stops:
         students_in_stop = db.query(StudentTripModel).filter(
@@ -178,32 +186,24 @@ def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
             ])
         ).all()
 
-        # Se houver alunos com os status relevantes, adiciona o ponto para validação
+        print(f"Parada de ônibus {bus_stop.id}: Alunos na parada: {students_in_stop}")
+
         if students_in_stop:
             filtered_bus_stops.append(bus_stop)
 
-    # Se nenhum ponto de ônibus tiver alunos relevantes, finalizar a viagem diretamente
-    if not filtered_bus_stops:
-        trip.status = TripStatusEnum.CONCLUIDA
-        db.commit()
-        db.refresh(trip)
-        return trip
+    print(f"Filtered bus stops: {filtered_bus_stops}")
 
-    # Verificar condições de finalização considerando apenas os pontos filtrados
-    num_no_ponto = sum(1 for bus_stop in filtered_bus_stops if bus_stop.status == TripBusStopStatusEnum.NO_PONTO)
-    num_ja_passou = sum(1 for bus_stop in filtered_bus_stops if bus_stop.status == TripBusStopStatusEnum.JA_PASSOU)
+    # Novo código: Verificar se ainda há alunos presentes ou aguardando nas paradas
+    if any(filtered_bus_stops):
+        print("Ainda há alunos presentes nas paradas, não é possível finalizar a viagem.")
+        raise HTTPException(status_code=400, detail="Ainda há alunos presentes ou aguardando no ponto")
 
-    if not (num_ja_passou == len(filtered_bus_stops) or (num_no_ponto == 1 and num_ja_passou == len(filtered_bus_stops) - 1)):
-        raise HTTPException(status_code=400, detail="Conditions not met to finalize the trip")
-
-    # Definir o status da viagem como "Concluída" se todas as condições forem atendidas
+    print("Nenhuma parada de ônibus com alunos presentes, finalizando viagem")
     trip.status = TripStatusEnum.CONCLUIDA
     db.commit()
     db.refresh(trip)
-
+    print(f"Viagem {trip_id} concluída")
     return trip
-
-
 
 @router.get("/active/{driver_id}", response_model=Trip)
 def check_active_trip(driver_id: int, db: Session = Depends(get_db)):
