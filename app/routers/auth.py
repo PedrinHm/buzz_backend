@@ -161,15 +161,16 @@ async def update_device_token(request: UpdateDeviceTokenRequest, db: Session = D
     return {"status": "success", "message": "Device token updated successfully"}
 
 @router.post("/set-new-password")
-async def set_new_password(user_id: int, new_password: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+async def set_new_password(request: SetNewPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == request.user_id).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     # Atualiza a senha do usuário
-    user.set_password(new_password)
+    user.set_password(request.new_password)
     user.first_login = "false"  # Após a redefinição, marque o primeiro login como falso
     db.commit()
 
     return {"status": "success", "message": "Password updated successfully"}
+
