@@ -34,38 +34,62 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
         print("Nenhuma viagem associada ao StudentTrip.")
         raise HTTPException(status_code=404, detail="Student's associated trip not found")
 
+    # Alias para evitar ambiguidades
+    trip_alias = aliased(TripModel)
+    student_trip_alias = aliased(StudentTripModel)
+
     # Obter ônibus em viagens ativas, excluindo o ônibus que o aluno está vinculado
-    active_buses = db.query(
-        BusModel.id.label("bus_id"),
-        BusModel.registration_number,
-        BusModel.name,
-        BusModel.capacity,
-        TripModel.id.label("trip_id"),
-        TripModel.trip_type
-    ).join(TripModel).filter(
-        TripModel.status == TripStatusEnum.ATIVA,
-        TripModel.system_deleted == 0,
-        BusModel.system_deleted == 0,
-        TripModel.bus_id != current_trip.trip.bus_id  # Exclui o ônibus vinculado ao aluno
-    ).all()
+    active_buses = (
+        db.query(
+            BusModel.id.label("bus_id"),
+            BusModel.registration_number,
+            BusModel.name,
+            BusModel.capacity,
+            trip_alias.id.label("trip_id"),
+            trip_alias.trip_type,
+            func.count(student_trip_alias.id).label("occupied_seats")  # Conta os student_trips válidos
+        )
+        .join(trip_alias, BusModel.id == trip_alias.bus_id)
+        .outerjoin(
+            student_trip_alias,
+            (student_trip_alias.trip_id == trip_alias.id) &
+            (student_trip_alias.status.in_([1, 2, 3])) &
+            (student_trip_alias.system_deleted == 0)
+        )
+        .filter(
+            trip_alias.status == TripStatusEnum.ATIVA,
+            trip_alias.system_deleted == 0,
+            BusModel.system_deleted == 0,
+            trip_alias.bus_id != current_trip.trip.bus_id  # Exclui o ônibus vinculado ao aluno
+        )
+        .group_by(
+            BusModel.id,
+            BusModel.registration_number,
+            BusModel.name,
+            BusModel.capacity,
+            trip_alias.id,
+            trip_alias.trip_type
+        )
+        .all()
+    )
     
     if not active_buses:
         print("Nenhum ônibus ativo encontrado.")
         raise HTTPException(status_code=404, detail="No active buses found")
 
-    result = [
+    return [
         {
             "bus_id": bus_id,
             "trip_id": trip_id,
             "registration_number": registration_number,
             "name": name,
             "capacity": capacity,
-            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta"
+            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta",
+            "available_seats": capacity - occupied_seats  # Calcula as vagas disponíveis
         }
-        for bus_id, registration_number, name, capacity, trip_id, trip_type in active_buses
+        for bus_id, registration_number, name, capacity, trip_id, trip_type, occupied_seats in active_buses
     ]
-    
-    return result
+
 
 
 
