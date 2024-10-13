@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased  
+from sqlalchemy import func
 from .. import models, schemas
 from ..config.database import get_db
 from typing import List
@@ -7,6 +8,7 @@ from ..models.trip import Trip as TripModel, TripStatusEnum, TripTypeEnum
 from ..models.bus import Bus as BusModel
 from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatusEnum
 from ..schemas.bus import Bus, BusCreate, BusUpdate
+
 
 router = APIRouter(
     prefix="/buses",
@@ -151,33 +153,62 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True}
 
+from sqlalchemy import func  # Certifique-se de que func está importado corretamente
+from sqlalchemy.orm import aliased  # Para criar alias se necessário
+
 @router.get("/trips/active_trips", response_model=List[dict])
 def get_active_buses(db: Session = Depends(get_db)):
-    active_buses = db.query(
-        BusModel.id.label("bus_id"),  # Adiciona o campo 'id' do ônibus
-        BusModel.registration_number,
-        BusModel.name,
-        BusModel.capacity,
-        TripModel.id.label("trip_id"),  # Adiciona o campo 'id' da viagem
-        TripModel.trip_type
-    ).join(TripModel).filter(
-        TripModel.status == TripStatusEnum.ATIVA,
-        TripModel.system_deleted == 0,
-        BusModel.system_deleted == 0
-    ).all()
+    # Alias para evitar ambiguidades
+    trip_alias = aliased(TripModel)
+    student_trip_alias = aliased(StudentTripModel)
+
+    # Consulta para obter os ônibus com viagens ativas
+    active_buses = (
+        db.query(
+            BusModel.id.label("bus_id"),
+            BusModel.registration_number,
+            BusModel.name,
+            BusModel.capacity,
+            trip_alias.id.label("trip_id"),
+            trip_alias.trip_type,
+            func.count(student_trip_alias.id).label("occupied_seats")  # Conta os student_trips válidos
+        )
+        .select_from(BusModel)  # Definimos explicitamente que estamos começando de BusModel
+        .join(trip_alias, BusModel.id == trip_alias.bus_id)  # Fazendo JOIN com TripModel
+        .outerjoin(
+            student_trip_alias,  # Faz um LEFT JOIN com StudentTripModel
+            (student_trip_alias.trip_id == trip_alias.id) &
+            (student_trip_alias.status.in_([1, 2, 3])) &
+            (student_trip_alias.system_deleted == 0)
+        )
+        .filter(
+            trip_alias.status == TripStatusEnum.ATIVA,
+            trip_alias.system_deleted == 0,
+            BusModel.system_deleted == 0
+        )
+        .group_by(
+            BusModel.id,
+            BusModel.registration_number,
+            BusModel.name,
+            BusModel.capacity,
+            trip_alias.id,
+            trip_alias.trip_type
+        )
+        .all()
+    )
 
     if not active_buses:
         raise HTTPException(status_code=404, detail="No active buses found")
 
     return [
         {
-            "bus_id": bus_id,  # Inclui o 'id' do ônibus na resposta
-            "trip_id": trip_id,  # Inclui o 'id' da viagem na resposta
+            "bus_id": bus_id,
+            "trip_id": trip_id,
             "registration_number": registration_number,
             "name": name,
             "capacity": capacity,
-            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta"
+            "trip_type": "Ida" if trip_type == TripTypeEnum.IDA else "Volta",
+            "available_seats": capacity - occupied_seats  # Calcula as vagas disponíveis
         }
-        for bus_id, registration_number, name, capacity, trip_id, trip_type in active_buses
+        for bus_id, registration_number, name, capacity, trip_id, trip_type, occupied_seats in active_buses
     ]
-
