@@ -29,7 +29,7 @@ def send_reset_password_email(recipient_email: str, token: str):
 
     # Cria a mensagem de e-mail
     subject = "Redefinição de Senha"
-    body = f"Olá,\n\nClique no link para redefinir sua senha: https://buzzfrontend-production.com/reset-password?token={token}\n\nSe você não solicitou essa mudança, ignore este e-mail."
+    body = f"Olá,\n\nClique no link para redefinir sua senha: https://buzz-reset-password.vercel.app/reset-password?token={token}\n\nSe você não solicitou essa mudança, ignore este e-mail."
     
     msg = MIMEMultipart()
     msg['From'] = smtp_user
