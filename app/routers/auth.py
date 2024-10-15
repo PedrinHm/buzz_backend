@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..config.database import SessionLocal
 from ..models.user import User
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 from smtplib import SMTP
 from email.mime.text import MIMEText
@@ -90,7 +90,7 @@ login_attempts = {}
 @router.post("/", response_model=LoginResponse)
 async def login(login_data: LoginData, db: Session = Depends(get_db)):
     email = login_data.email
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)  # Atualizado para evitar o warning
     attempt_window = timedelta(minutes=10)
     max_attempts = 5
 
@@ -178,4 +178,3 @@ async def set_new_password(request: SetNewPasswordRequest, db: Session = Depends
     db.commit()
 
     return {"status": "success", "message": "Password updated successfully"}
-

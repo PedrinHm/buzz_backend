@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -31,6 +31,4 @@ class BusStop(BusStopBase):
     update_date: datetime
     create_date: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)

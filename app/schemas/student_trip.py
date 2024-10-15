@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 from ..models.student_trip import StudentStatusEnum
@@ -9,8 +9,7 @@ class StudentTripBase(BaseModel):
     status: Optional[StudentStatusEnum] = None
     point_id: int
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 class StudentTripCreate(StudentTripBase):
     pass
@@ -21,8 +20,7 @@ class StudentTripUpdate(BaseModel):
     status: Optional[StudentStatusEnum] = None
     point_id: Optional[int] = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 class StudentTripInDBBase(StudentTripBase):
     id: int
@@ -30,9 +28,7 @@ class StudentTripInDBBase(StudentTripBase):
     update_date: datetime
     create_date: datetime
 
-    class Config:
-        orm_mode = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class StudentTrip(StudentTripInDBBase):
     pass

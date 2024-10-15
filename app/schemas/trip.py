@@ -1,5 +1,4 @@
-# app/schemas/trip.py
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 from ..models.trip import TripTypeEnum, TripStatusEnum
@@ -11,8 +10,7 @@ class TripBase(BaseModel):
     driver_id: int
     bus_issue: bool = False  # Adicionado o campo de problema no ônibus
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 class TripCreate(TripBase):
     pass
@@ -24,8 +22,7 @@ class TripUpdate(BaseModel):
     driver_id: Optional[int] = None
     bus_issue: Optional[bool] = None  # Adicionado o campo de problema no ônibus
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 class TripInDBBase(TripBase):
     id: int
@@ -33,9 +30,7 @@ class TripInDBBase(TripBase):
     update_date: datetime
     create_date: datetime
 
-    class Config:
-        orm_mode = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class Trip(TripInDBBase):
     pass

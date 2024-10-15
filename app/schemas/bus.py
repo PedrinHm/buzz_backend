@@ -15,7 +15,7 @@ class BusCreate(BusBase):
     # Validador para transformar em letras maiúsculas
     @field_validator("registration_number", mode='before')
     def uppercase_registration_number(cls, v):
-        if v:
+        if v is not None:  # Verifica se não é None
             return v.upper()
         return v
 
@@ -31,7 +31,7 @@ class BusUpdate(BusBase):
     # Mesmo validador de uppercase para BusUpdate
     @field_validator("registration_number", mode='before')
     def uppercase_registration_number(cls, v):
-        if v:
+        if v is not None:  # Verifica se não é None
             return v.upper()
         return v
 

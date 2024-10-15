@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 from typing import Optional
 
@@ -14,14 +14,17 @@ class TripBusStopBase(BaseModel):
     bus_stop_id: int
     status: TripBusStopStatusEnum
 
+    model_config = ConfigDict(use_enum_values=True)
+
 class TripBusStopCreate(TripBusStopBase):
     pass
 
 class TripBusStopUpdate(BaseModel):
     status: TripBusStopStatusEnum
 
+    model_config = ConfigDict(use_enum_values=True)
+
 class TripBusStop(TripBusStopBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
