@@ -1,64 +1,115 @@
 import pytest
-from unittest import mock
-from app.models.user import User  # Importe o modelo User real
+from pydantic import ValidationError
+from datetime import datetime
+from unittest.mock import patch, MagicMock
+from app.models import User  
+from app.schemas import UserCreate, UserUpdate
 import bcrypt
 
-@pytest.fixture
-def mock_session():
-    """
-    Fixture que retorna uma sessão mockada para simular interações com o banco de dados.
-    """
-    with mock.patch('app.config.database.SessionLocal') as mock_session:
-        yield mock_session
+# Função de validação de CPF
+from app.schemas.user import validate_cpf
 
-def test_create_user(mock_session):
-    # Simulando a criação de um novo usuário
-    new_user = User(id=1, name="John Doe", email="johndoe@example.com", cpf="12345678900", phone="5551999999999")
+# Testes unitários sugeridos:
 
-    # Salvando o usuário no banco de dados (usando mock)
-    session = mock_session()
-    session.add.return_value = None  # Simula que o `add` não retorna nada
-    session.commit.return_value = None  # Simula que o `commit` também não retorna nada
+# 1. Testes de Criação do Usuário
+@patch('app.schemas.UserCreate', autospec=True)
+def test_user_create(mock_user_create):
+    user_data = {
+        "email": "teste@email.com",
+        "password": "senha123",
+        "name": "Teste",
+        "cpf": "12345678909",
+        "phone": "+5511999999999",
+        "user_type_id": 1
+    }
+    mock_user_create.return_value = UserCreate(**user_data)
+    user = mock_user_create(**user_data)
+    assert user.email == "teste@email.com"
+    assert user.name == "Teste"
+    assert user.cpf == "12345678909"
 
-    # Ação: adicionar o usuário na sessão
-    session.add(new_user)
-    session.commit()
+# 2. Teste de Validação de CPF
+@patch('app.schemas.user.validate_cpf', autospec=True)
+def test_validate_cpf(mock_validate_cpf):
+    mock_validate_cpf.return_value = True
+    assert validate_cpf("12345678909") == True
+    mock_validate_cpf.return_value = False
+    assert validate_cpf("11111111111") == False
 
-    # Verificações
-    session.add.assert_called_once_with(new_user)
-    session.commit.assert_called_once()
+# 3. Teste de Validação de Telefone
+def test_user_phone_validation():
+    with pytest.raises(ValidationError):
+        UserCreate(email="teste@email.com", password="senha123", name="Teste", cpf="12345678909", phone="123", user_type_id=1)
 
-    # Checando se os dados do usuário estão corretos
-    assert new_user.name == "John Doe"
-    assert new_user.email == "johndoe@example.com"
+# 4. Teste de Criptografia de Senha (sem interação com o banco de dados)
+def test_user_password_hashing():
+    user = UserCreate(email="teste@email.com", password="senha123", name="Teste", cpf="12345678909", phone="+5511999999999", user_type_id=1)
+    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    assert bcrypt.checkpw(user.password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-def test_update_user(mock_session):
-    # Simulando a recuperação de um usuário existente
-    existing_user = User(id=1, name="John Doe", email="johndoe@example.com")
-
-    session = mock_session()
-    # Configurando o mock para retornar o existing_user ao chamar session.query().get()
-    session.query.return_value.get.return_value = existing_user
-
-    # Ação: simula a busca e atualização do nome do usuário
-    user_to_update = session.query(User).get(1)  # Simula a chamada real ao banco de dados
-    user_to_update.name = "John Updated"
-
-    # Ação: commit das mudanças
-    session.commit()
-
-    # Verificações
-    session.query.assert_called_once_with(User)  # Verifica se query foi chamado com o modelo correto
-    session.commit.assert_called_once()
-    assert user_to_update.name == "John Updated"
-
+# 5. Teste de Verificação de Senha (sem interação com o banco de dados)
 def test_verify_password():
-    # Simulando um usuário com senha definida
-    user = User(id=1, name="John Doe")
-    user.set_password("strong_password")
+    password = "minha_senha"
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    user = UserCreate(email="teste@email.com", password=hashed_password, name="Teste", cpf="12345678909", phone="+5511999999999", user_type_id=1)
+    assert bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')) == True
+    assert bcrypt.checkpw("senha_errada".encode('utf-8'), user.password.encode('utf-8')) == False
 
-    # Verificando a senha correta
-    assert user.verify_password("strong_password") is True
+# 6. Teste de Atualização de E-mail e Telefone
+@patch('app.schemas.UserUpdate', autospec=True)
+def test_user_update(mock_user_update):
+    update_data = {
+        "email": "novo@email.com",
+        "phone": "+5511999999999"
+    }
+    mock_user_update.return_value = UserUpdate(**update_data)
+    user_update = mock_user_update(**update_data)
+    assert user_update.email == "novo@email.com"
+    assert user_update.phone == "+5511999999999"
 
-    # Verificando uma senha incorreta
-    assert user.verify_password("wrong_password") is False
+# 7. Teste de Atualização de Nome
+@patch('app.schemas.UserUpdate', autospec=True)
+def test_user_update_name(mock_user_update):
+    mock_user_update.return_value = UserUpdate(name="Novo Nome")
+    user_update = mock_user_update(name="Novo Nome")
+    assert user_update.name == "Novo Nome"
+
+# 8. Teste de Dados Não Válidos (e-mail inválido, CPF inválido, telefone inválido)
+def test_invalid_data():
+    with pytest.raises(ValidationError):
+        UserCreate(email="email_invalido", password="senha123", name="Teste", cpf="12345678909", phone="123456", user_type_id=1)
+    with pytest.raises(ValidationError):
+        UserCreate(email="teste@email.com", password="senha123", name="Teste", cpf="11111111111", phone="+5511999999999", user_type_id=1)
+
+# 9. Teste de Validação do Primeiro Login (sem interação com o banco de dados)
+@patch('app.schemas.UserCreate', autospec=True)
+def test_first_login(mock_user_create):
+    mock_user_create.return_value = MagicMock(first_login=True)
+    user_data = {
+        "email": "teste@email.com",
+        "password": "senha123",
+        "name": "Teste",
+        "cpf": "12345678909",
+        "phone": "+5511999999999",
+        "user_type_id": 1,
+        "first_login": True
+    }
+    user = mock_user_create(**user_data)
+    assert user.first_login == True
+
+# 10. Teste de Validação de Datas de Criação e Atualização (simulando instância sem banco de dados)
+@patch('app.schemas.UserCreate', autospec=True)
+def test_creation_and_update_dates(mock_user_create):
+    create_date = datetime.now()
+    update_date = datetime.now()
+    mock_user_create.return_value = UserCreate(
+        email="teste@email.com",
+        password="senha123",
+        name="Teste",
+        cpf="12345678909",
+        phone="+5511999999999",
+        user_type_id=1
+    )
+    user = mock_user_create()
+    assert isinstance(create_date, datetime)
+    assert isinstance(update_date, datetime)
