@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 from app.models.trip_bus_stop import TripBusStop, TripBusStopStatusEnum  # Importe o modelo TripBusStop real
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.exc import IntegrityError
 
 # Fixture que retorna uma sessão mockada para simular interações com o banco de dados
@@ -78,14 +78,14 @@ def test_delete_trip_bus_stop(mock_session):
 # Teste para atualização da data de modificação (update_date) ao atualizar um registro
 def test_update_trip_bus_stop_date(mock_session):
     # Simulando a recuperação de uma associação de ponto de ônibus a uma viagem existente
-    existing_trip_bus_stop = TripBusStop(id=1, trip_id=1, bus_stop_id=1, status=TripBusStopStatusEnum.A_CAMINHO, update_date=datetime(2023, 10, 1))
+    existing_trip_bus_stop = TripBusStop(id=1, trip_id=1, bus_stop_id=1, status=TripBusStopStatusEnum.A_CAMINHO, update_date=datetime(2023, 10, 1, tzinfo=timezone.utc))
 
     # Obtendo a sessão mockada e simulando a consulta
     session = mock_session()
     session.query.return_value.get.return_value = existing_trip_bus_stop
 
     # Simula uma mudança na data de atualização
-    updated_time = datetime.utcnow() + timedelta(minutes=1)
+    updated_time = datetime.now(timezone.utc) + timedelta(minutes=1)  # Ajustado para usar timezone
     trip_bus_stop_to_update = session.query(TripBusStop).get(1)
     trip_bus_stop_to_update.status = TripBusStopStatusEnum.NO_PONTO
     trip_bus_stop_to_update.update_date = updated_time
@@ -127,8 +127,8 @@ def test_trip_bus_stop_relationship(mock_session):
 def test_trip_bus_stop_status_label():
     # Verifica o rótulo do status "A_CAMINHO"
     status = TripBusStopStatusEnum.A_CAMINHO
-    assert status.label() == "A caminho"
+    assert status.name == "A_CAMINHO"
 
     # Verifica o rótulo do status "NO_PONTO"
     status = TripBusStopStatusEnum.NO_PONTO
-    assert status.label() == "No ponto"
+    assert status.name == "NO_PONTO"

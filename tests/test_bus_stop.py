@@ -2,7 +2,7 @@ import pytest
 from unittest import mock
 from app.models.bus_stop import BusStop
 from app.schemas.bus_stop import BusStopCreate, BusStopUpdate, BusStop as BusStopSchema
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 # Fixture que retorna uma sessão mockada para simular interações com o banco de dados
@@ -104,8 +104,8 @@ def test_validate_bus_stop_schema():
         "name": "Bus Stop 1",
         "faculty_id": 1,
         "system_deleted": 0,
-        "create_date": datetime.utcnow(),
-        "update_date": datetime.utcnow(),
+        "create_date": datetime.now(timezone.utc),  # Atualizado
+        "update_date": datetime.now(timezone.utc),  # Atualizado
     }
     bus_stop = BusStopSchema(**bus_stop_data)
 
@@ -172,7 +172,7 @@ def test_soft_delete_already_deleted_bus_stop(mock_session):
 # Teste para atualizar o campo update_date de um ponto de ônibus
 def test_update_date_is_updated(mock_session):
     # Simulando a atualização do campo update_date
-    existing_bus_stop = BusStop(id=1, name="Bus Stop 1", faculty_id=1, update_date=datetime(2023, 1, 1))
+    existing_bus_stop = BusStop(id=1, name="Bus Stop 1", faculty_id=1, update_date=datetime(2023, 1, 1, tzinfo=timezone.utc))  # Ajustado para ter timezone
 
     # Obtendo a sessão mockada e simulando a consulta
     session = mock_session()
@@ -181,12 +181,12 @@ def test_update_date_is_updated(mock_session):
     # Atualizando o nome do ponto de ônibus e a data de atualização
     bus_stop_to_update = session.query(BusStop).get(1)
     bus_stop_to_update.name = "Updated Bus Stop"
-    bus_stop_to_update.update_date = datetime.utcnow()  # Simulando a atualização manual do campo
+    bus_stop_to_update.update_date = datetime.now(timezone.utc)  # Já tem timezone
     session.commit()
 
     # Verificando se a data de atualização foi modificada corretamente
-    assert bus_stop_to_update.update_date > datetime(2023, 1, 1)
-
+    assert bus_stop_to_update.update_date > datetime(2023, 1, 1, tzinfo=timezone.utc)  # Comparando com datetime com timezone
+    
 # Teste para validar falha ao criar schema com faculty_id inválido
 def test_invalid_faculty_id_schema():
     # Testando falha ao criar schema com faculty_id inválido (string em vez de int)
