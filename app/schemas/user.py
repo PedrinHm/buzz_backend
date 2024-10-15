@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 from typing import Optional
 import phonenumbers
 import re
@@ -24,7 +24,7 @@ class UserBase(BaseModel):
     faculty_id: Optional[int] = None
     device_token: Optional[str] = None
 
-    @validator('phone')
+    @field_validator('phone')
     def validate_phone(cls, v):
         if v:
             try:
@@ -35,7 +35,7 @@ class UserBase(BaseModel):
                 raise ValueError("Invalid phone number format")
         return v
 
-    @validator('cpf')
+    @field_validator('cpf')
     def validate_cpf(cls, v):
         if v and not validate_cpf(v):
             raise ValueError("Invalid CPF")
@@ -57,7 +57,7 @@ class UserUpdate(BaseModel):
     device_token: Optional[str] = None
     name: Optional[str] = None  # Adicionado para permitir a edição do nome
 
-    @validator('phone', check_fields=False)
+    @field_validator('phone', check_fields=False)
     def validate_phone(cls, v):
         if v:
             try:
@@ -68,12 +68,11 @@ class UserUpdate(BaseModel):
                 raise ValueError("Invalid phone number format")
         return v
 
-    @validator('cpf', check_fields=False)
+    @field_validator('cpf', check_fields=False)
     def validate_cpf(cls, v):
         if v and not validate_cpf(v):
             raise ValueError("Invalid CPF")
         return v
-
 
 class UserProfilePicture(BaseModel):
     picture: str
@@ -88,8 +87,7 @@ class UserInDBBase(UserBase):
     profile_picture: Optional[str] = None
     faculty_name: Optional[str] = None  
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Atualização para Pydantic V2
 
 class User(UserInDBBase):
     pass

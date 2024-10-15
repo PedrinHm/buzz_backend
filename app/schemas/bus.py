@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
 import re
 
@@ -12,13 +12,15 @@ class BusCreate(BusBase):
     name: str
     capacity: int
 
-    @validator("registration_number", pre=True, always=True)
+    # Validador para transformar em letras maiúsculas
+    @field_validator("registration_number", mode='before')
     def uppercase_registration_number(cls, v):
         if v:
             return v.upper()
         return v
 
-    @validator("registration_number")
+    # Validador para verificar o formato da placa
+    @field_validator("registration_number")
     def validate_registration_number(cls, v):
         pattern = r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$|^[A-Z]{3}[0-9]{4}$'
         if not re.match(pattern, v):
@@ -26,7 +28,8 @@ class BusCreate(BusBase):
         return v
 
 class BusUpdate(BusBase):
-    @validator("registration_number", pre=True, always=True)
+    # Mesmo validador de uppercase para BusUpdate
+    @field_validator("registration_number", mode='before')
     def uppercase_registration_number(cls, v):
         if v:
             return v.upper()
@@ -39,8 +42,7 @@ class BusInDBBase(BusBase):
     capacity: int
     system_deleted: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Bus(BusInDBBase):
     pass

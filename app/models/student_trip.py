@@ -39,3 +39,4 @@ class StudentTrip(Base):
     trip = relationship("Trip", back_populates="student_trips")
     student = relationship("User", back_populates="student_trips")
     bus_stop = relationship("BusStop", back_populates="student_trips")
+
