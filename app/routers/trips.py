@@ -144,7 +144,6 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{trip_id}/finalize_return_trip", response_model=Trip)
 def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
-    print(f"Recebido trip_id: {trip_id}")
     
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     print(f"Viagem encontrada: {trip}")
@@ -238,9 +237,7 @@ def get_trip_student_details(trip_id: int, db: Session = Depends(get_db)):
             "student_status": StudentStatusEnum(detail.status).label(),
             "profile_picture": detail.student.profile_picture
         } for detail in trip_details
-    ]
-
-    print(result)  # Imprime os dados no console para depuração
+    ] 
 
     return result
 
