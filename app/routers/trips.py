@@ -48,7 +48,7 @@ def create_trip(trip: TripCreate, db: Session = Depends(get_db)):
     db.refresh(db_trip)
     return db_trip
 
-@router.put("/{trip_id}/finalizar_ida")
+@router.put("/{trip_id}/finalize_outbound_trip")
 def finalizar_viagem_ida(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
@@ -142,7 +142,7 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "deleted"}
 
-@router.put("/{trip_id}/finalizar_volta", response_model=Trip)
+@router.put("/{trip_id}/finalize_return_trip", response_model=Trip)
 def finalizar_viagem_volta(trip_id: int, db: Session = Depends(get_db)):
     # Obter a viagem do banco de dados
     print(f"Recebido trip_id: {trip_id}")

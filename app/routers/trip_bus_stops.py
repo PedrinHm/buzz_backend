@@ -75,7 +75,7 @@ def delete_trip_bus_stop(trip_bus_stop_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "deleted"}
 
-@router.put("/atualizar_proximo_para_no_ponto/{trip_id}", response_model=TripBusStop)
+@router.put("/update_next_bus_stop/{trip_id}", response_model=TripBusStop)
 def update_next_to_at_stop(trip_id: int, db: Session = Depends(get_db)):
     # Encontre o ponto de ônibus que está como "Próximo ponto"
     db_trip_bus_stop = db.query(TripBusStopModel).filter(
@@ -94,7 +94,7 @@ def update_next_to_at_stop(trip_id: int, db: Session = Depends(get_db)):
     
     return db_trip_bus_stop
 
-@router.put("/selecionar_proximo_ponto/{trip_id}", response_model=TripBusStop)
+@router.put("/select_next_stop/{trip_id}", response_model=TripBusStop)
 def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_db)):
     # Obter o ponto atual com status "No ponto"
     current_stop = db.query(TripBusStopModel).filter(
@@ -136,7 +136,7 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
     return new_stop
 
 
-@router.get("/pontos_a_caminho/{trip_id}", response_model=List[dict])
+@router.get("/stops_on_the_way/{trip_id}", response_model=List[dict])
 def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
     # Lista de status permitidos para os alunos
     allowed_student_statuses = [
@@ -176,7 +176,7 @@ def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
     return result
 
 
-@router.put("/finalizar_ponto_atual/{trip_id}", response_model=TripBusStop)
+@router.put("/finalize_current_stop/{trip_id}", response_model=TripBusStop)
 def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
     # Obter o ponto atual com status "No ponto"
     current_stop = db.query(TripBusStopModel).filter(

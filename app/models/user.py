@@ -26,7 +26,7 @@ class User(Base):
     
     trips = relationship("Trip", back_populates="driver")
     student_trips = relationship("StudentTrip", back_populates="student")
-    faculty = relationship("Faculty")  # Relacionamento com a tabela de faculdades
+    faculty = relationship("Faculty") 
 
     def verify_password(self, password):
         if not password or not self.password:
