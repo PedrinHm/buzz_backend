@@ -41,19 +41,27 @@ def get_bus_stops_for_trip(
 
     selected_bus_stop_id = student_trip.point_id if student_trip else None
 
-    # Base da consulta para todos os pontos de ônibus vinculados à faculdade
+      # Consulta para buscar todos os pontos de ônibus vinculados à faculdade
+    # Exclui pontos de ônibus com status "já passou"
     base_query = db.query(BusStopModel, FacultyModel).join(FacultyModel, BusStopModel.faculty_id == FacultyModel.id).filter(
         BusStopModel.system_deleted == 0,
         FacultyModel.system_deleted == 0,
-        BusStopModel.id != selected_bus_stop_id  # Exclui o ponto de ônibus vinculado ao aluno
+        BusStopModel.id != selected_bus_stop_id,  # Exclui o ponto de ônibus vinculado ao aluno
+        ~BusStopModel.id.in_(db.query(TripBusStopModel.bus_stop_id).filter(
+            TripBusStopModel.trip_id == trip.id,
+            TripBusStopModel.status == TripBusStopStatusEnum.JA_PASSOU.value,
+            TripBusStopModel.system_deleted == 0
+        ))  # Exclui os pontos de ônibus que já passaram
     )
+
 
     # Verifica o tipo de viagem
     if trip.trip_type == TripTypeEnum.VOLTA:
         # Busca apenas os pontos de ônibus vinculados à viagem em trip_bus_stops
         trip_bus_stops = db.query(TripBusStopModel).filter(
             TripBusStopModel.trip_id == trip.id,
-            TripBusStopModel.system_deleted == 0
+            TripBusStopModel.system_deleted == 0,
+            TripBusStopModel.status != 4
         ).all()
 
         # Converte para um dicionário de IDs de pontos de ônibus e seus status

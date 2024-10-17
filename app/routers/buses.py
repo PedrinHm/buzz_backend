@@ -7,6 +7,7 @@ from typing import List
 from ..models.trip import Trip as TripModel, TripStatusEnum, TripTypeEnum
 from ..models.bus import Bus as BusModel
 from ..models.student_trip import StudentTrip as StudentTripModel, StudentStatusEnum
+from ..models.trip_bus_stop import TripBusStop as TripBusStopModel 
 from ..schemas.bus import Bus, BusCreate, BusUpdate
 
 
@@ -32,10 +33,10 @@ def get_active_buses(db: Session = Depends(get_db)):
             trip_alias.trip_type,
             func.count(student_trip_alias.id).label("occupied_seats")  # Conta os student_trips válidos
         )
-        .select_from(BusModel)  # Definimos explicitamente que estamos começando de BusModel
-        .join(trip_alias, BusModel.id == trip_alias.bus_id)  # Fazendo JOIN com TripModel
+        .select_from(BusModel)  
+        .join(trip_alias, BusModel.id == trip_alias.bus_id)  
         .outerjoin(
-            student_trip_alias,  # Faz um LEFT JOIN com StudentTripModel
+            student_trip_alias,  
             (student_trip_alias.trip_id == trip_alias.id) &
             (student_trip_alias.status.in_([1, 2, 3])) &
             (student_trip_alias.system_deleted == 0)
