@@ -23,11 +23,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         if db_user.system_deleted == 0:
             if db_user.email == user.email:
-                raise HTTPException(status_code=400, detail="Email already registered")
+                raise HTTPException(status_code=400, detail="E-mail já cadastrado")
             if db_user.phone == user.phone:
-                raise HTTPException(status_code=400, detail="Phone number already registered")
+                raise HTTPException(status_code=400, detail="Número de telefone já cadastrado")
             if db_user.cpf == user.cpf:
-                raise HTTPException(status_code=400, detail="CPF already registered")
+                raise HTTPException(status_code=400, detail="CPF já cadastrado")
         else:
             # Reativar usuário
             db_user.system_deleted = 0
@@ -69,7 +69,7 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
 
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
     # Verifica se o usuário possui uma faculdade associada e retorna o nome
     if user.faculty:
@@ -83,7 +83,7 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
     for var, value in vars(user).items():
         if value:
             if var == "password":
@@ -98,7 +98,7 @@ def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(ge
 def update_profile_picture(user_id: int, profile_picture: schemas.UserProfilePicture, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
     db_user.profile_picture = profile_picture.picture
     db.commit()
     return db_user
@@ -107,7 +107,7 @@ def update_profile_picture(user_id: int, profile_picture: schemas.UserProfilePic
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
     db_user.system_deleted = 1
     db.commit()
     return {"ok": True}
@@ -116,9 +116,9 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 def delete_profile_picture(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    # Remove a foto de perfil definindo o campo como None
+
     db_user.profile_picture = None
     db.commit()
     db.refresh(db_user)

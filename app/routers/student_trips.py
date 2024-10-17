@@ -20,7 +20,7 @@ router = APIRouter(
 async def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEnum, db: Session = Depends(get_db)):
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
 
     current_status = StudentStatusEnum(student_trip.status)
 
@@ -34,12 +34,12 @@ async def update_student_trip_status(student_trip_id: int, new_status: StudentSt
 
     # Verifica se a transição é permitida
     if new_status not in allowed_transitions.get(current_status, []):
-        raise HTTPException(status_code=400, detail="Status transition not allowed")
+        raise HTTPException(status_code=400, detail="Transição de status não permitida")
 
     # Verifica a capacidade do ônibus se a transição for de NAO_VOLTARA ou FILA_DE_ESPERA para outro status
     if current_status in [StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.FILA_DE_ESPERA] and new_status != current_status:
         if not check_capacity(student_trip.trip_id, db):
-            raise HTTPException(status_code=400, detail="Bus capacity exceeded")
+            raise HTTPException(status_code=400, detail="Capacidade do ônibus excedida")
 
     # Se o novo status for "NAO_VOLTARA", enviar notificação para os alunos na "FILA_DE_ESPERA"
     if new_status == StudentStatusEnum.NAO_VOLTARA:
@@ -70,11 +70,11 @@ async def notify_students_in_waiting_list(trip_id: int, db: Session):
 def check_capacity(trip_id: int, db: Session) -> bool:
     trip = db.query(TripModel).filter(TripModel.id == trip_id).first()
     if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
 
     bus = db.query(BusModel).filter(BusModel.id == trip.bus_id).first()
     if not bus:
-        raise HTTPException(status_code=404, detail="Bus not found")
+        raise HTTPException(status_code=404, detail="Ônibus não encontrado")
 
     capacity = db.query(StudentTripModel).filter(
         StudentTripModel.trip_id == trip_id,
@@ -85,12 +85,12 @@ def check_capacity(trip_id: int, db: Session) -> bool:
 
 @router.post("/", response_model=StudentTrip)
 def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(get_db), waitlist: bool = False):
-    print("Iniciando a criação do student_trip...")
+    print("Iniciando a criação da viagem do estudante...")
 
     trip = db.query(TripModel).filter(TripModel.id == student_trip.trip_id).first()
     if not trip:
-        print("Erro: Trip not found")
-        raise HTTPException(status_code=404, detail="Trip not found")
+        print("Erro: Viagem não encontrada")
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
     
     print("Viagem encontrada. Verificando se o aluno já está cadastrado...")
     # Verificar se o aluno já está cadastrado na viagem
@@ -111,8 +111,8 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
             # Coloca o aluno na fila de espera se a capacidade estiver cheia
             student_status = StudentStatusEnum.FILA_DE_ESPERA
         else:
-            print("Erro: Capacidade do onibus atingida.")
-            raise HTTPException(status_code=400, detail="Capacidade do onibus atingida")
+            print("Erro: Capacidade do ônibus atingida.")
+            raise HTTPException(status_code=400, detail="Capacidade do ônibus atingida")
     else:
         print("Capacidade do ônibus disponível. Aluno será adicionado com status inicial.")
         # Define o status inicial com base no tipo da viagem
@@ -146,7 +146,7 @@ def create_student_trip(student_trip: StudentTripCreate, db: Session = Depends(g
         db.add(new_trip_bus_stop)
         db.commit()
 
-    print("Student trip criado com sucesso!")
+    print("Viagem do estudante criada com sucesso!")
     return db_student_trip
 
 
@@ -161,29 +161,29 @@ def read_student_trips(skip: int = 0, limit: int = 100, db: Session = Depends(ge
 def read_student_trip(student_trip_id: int, db: Session = Depends(get_db)):
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
     return student_trip
 
 @router.delete("/{student_trip_id}", response_model=dict)
 def delete_student_trip(student_trip_id: int, db: Session = Depends(get_db)):
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
     db.delete(student_trip)
     db.commit()
-    return {"status": "deleted"}
+    return {"status": "excluído"}
 
 @router.put("/{student_trip_id}/update_point", response_model=StudentTrip)
 def update_student_trip_point(student_trip_id: int, point_id: int, db: Session = Depends(get_db)):
     # Busca o registro de viagem do estudante
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
     
     # Busca os detalhes da viagem do estudante
     trip = db.query(TripModel).filter(TripModel.id == student_trip.trip_id).first()
     if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
 
     # Armazena o ponto anterior
     old_point_id = student_trip.point_id
@@ -203,7 +203,7 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
 
     # Se o ponto de ônibus já passou, lança exceção
     elif trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
-        raise HTTPException(status_code=400, detail="Bus stop has already passed")
+        raise HTTPException(status_code=400, detail="O ponto de ônibus já passou")
 
     # Define o status padrão dependendo do tipo da viagem
     elif not trip_bus_stop:
@@ -233,7 +233,7 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
     ).count()
 
     # Exibe o valor de student_count no terminal
-    print(f"Number of students linked to bus stop {old_point_id} in trip {student_trip.trip_id}: {student_count}")
+    print(f"Número de estudantes vinculados ao ponto de ônibus {old_point_id} na viagem {student_trip.trip_id}: {student_count}")
 
     # Se não houver mais estudantes vinculados ao ponto anterior na mesma viagem, inativa o ponto
     if student_count == 0:
@@ -244,11 +244,11 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
 
         # Verifica se encontrou o registro correto
         if not old_trip_bus_stop:
-            print(f"Trip bus stop with trip_id {student_trip.trip_id} and bus_stop_id {old_point_id} not found.")
-            raise HTTPException(status_code=404, detail="Trip bus stop not found")
+            print(f"Ponto de ônibus da viagem com trip_id {student_trip.trip_id} e bus_stop_id {old_point_id} não encontrado.")
+            raise HTTPException(status_code=404, detail="Ponto de ônibus da viagem não encontrado")
 
         # Exibe informações sobre o registro encontrado
-        print(f"Found TripBusStop with id {old_trip_bus_stop.id}, current system_deleted: {old_trip_bus_stop.system_deleted}")
+        print(f"Encontrado TripBusStop com id {old_trip_bus_stop.id}, system_deleted atual: {old_trip_bus_stop.system_deleted}")
 
         # Inativa o ponto de ônibus e faz commit
         old_trip_bus_stop.system_deleted = 1
@@ -256,7 +256,7 @@ def update_student_trip_point(student_trip_id: int, point_id: int, db: Session =
 
         # Verifica se o commit foi bem-sucedido
         db.refresh(old_trip_bus_stop)
-        print(f"Updated TripBusStop {old_trip_bus_stop.id}, system_deleted is now {old_trip_bus_stop.system_deleted}")
+        print(f"TripBusStop {old_trip_bus_stop.id} atualizado, system_deleted agora é {old_trip_bus_stop.system_deleted}")
 
     return student_trip
 
@@ -266,22 +266,22 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     # Busca pelo registro de student_trip
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
 
     # Busca pela nova trip_id
     new_trip = db.query(TripModel).filter(TripModel.id == new_trip_id).first()
     if not new_trip:
-        raise HTTPException(status_code=404, detail="New trip not found")
+        raise HTTPException(status_code=404, detail="Nova viagem não encontrada")
 
     if new_trip.status != TripStatusEnum.ATIVA:
-        raise HTTPException(status_code=400, detail="New trip is not active")
+        raise HTTPException(status_code=400, detail="Nova viagem não está ativa")
 
     # Verifica a capacidade e trata a lógica da fila de espera
     if not check_capacity(new_trip.id, db):
         if waitlist:
             student_trip.status = StudentStatusEnum.FILA_DE_ESPERA
         else:
-            raise HTTPException(status_code=400, detail="New trip is full")
+            raise HTTPException(status_code=400, detail="Nova viagem está cheia")
 
     # Validações e atualização de trip_bus_stop
     validate_and_update_trip_bus_stop(student_trip, db)
@@ -300,7 +300,7 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
         elif new_trip.trip_type == 2:
             new_trip_bus_stop_status = TripBusStopStatusEnum.A_CAMINHO
         else:
-            raise HTTPException(status_code=400, detail="Invalid trip type")
+            raise HTTPException(status_code=400, detail="Tipo de viagem inválido")
 
         new_trip_bus_stop = TripBusStopModel(
             trip_id=new_trip.id,
@@ -330,7 +330,7 @@ async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
         .first()
 
     if not active_trip:
-        raise HTTPException(status_code=404, detail="No active trip found for this student")
+        raise HTTPException(status_code=404, detail="Nenhuma viagem ativa encontrada para este estudante")
 
     return {
         "student_trip_id": active_trip.id,
@@ -348,9 +348,9 @@ def validate_and_update_trip_bus_stop(student_trip: StudentTripModel, db: Sessio
     ).all()
 
     # Print da lista de matching_trips com detalhes
-    print("Lista de matching_trips:")
+    print("Lista de viagens correspondentes:")
     for trip in matching_trips:
-        print(f"ID: {trip.id}, Trip ID: {trip.trip_id}, Point ID: {trip.point_id}, Status: {trip.status}")
+        print(f"ID: {trip.id}, ID da Viagem: {trip.trip_id}, ID do Ponto: {trip.point_id}, Status: {trip.status}")
 
     # Se retornar apenas o próprio registro de referência ou se houver um registro válido
     if len(matching_trips) == 1 and matching_trips[0].id == student_trip.id:
@@ -369,6 +369,8 @@ def validate_and_update_trip_bus_stop(student_trip: StudentTripModel, db: Sessio
         else:
             print("Nenhum trip_bus_stop não deletado encontrado para esta combinação de trip_id e bus_stop_id")
     else:
-        print("Mais de um matching_trips encontrado ou o ID de referência não corresponde.")
+        print("Mais de uma viagem correspondente encontrada ou o ID de referência não corresponde.")
 
     return
+
+

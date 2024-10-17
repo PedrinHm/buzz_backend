@@ -23,16 +23,14 @@ def get_bus_stops_for_trip(
     trip_id: int = Query(..., description="ID da viagem selecionada"),
     db: Session = Depends(get_db)
 ):
-    # Obtém a viagem associada ao trip_id fornecido
     trip = db.query(TripModel).filter(
         TripModel.id == trip_id,
         TripModel.system_deleted == 0
     ).first()
 
     if not trip:
-        raise HTTPException(status_code=404, detail="Viagem não encontrada para o ID fornecido")
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
 
-    # Consulta para verificar se o aluno está vinculado a algum ponto de ônibus em student_trip
     student_trip = db.query(StudentTripModel).filter(
         StudentTripModel.student_id == student_id,
         StudentTripModel.trip_id == trip.id,
@@ -132,7 +130,7 @@ def create_bus_stop(bus_stop: schemas.BusStopCreate, db: Session = Depends(get_d
         (BusStopModel.system_deleted == 0)
     ).first()
     if db_bus_stop:
-        raise HTTPException(status_code=400, detail="Bus stop name already registered")
+        raise HTTPException(status_code=400, detail="Nome do ponto de ônibus já registrado")
 
     # Verifica se o nome já está registrado mas está deletado e reativa-o
     db_bus_stop_deleted = db.query(BusStopModel).filter(
@@ -165,14 +163,14 @@ def read_bus_stops(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 def read_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
     bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id, BusStopModel.system_deleted == 0).first()
     if bus_stop is None:
-        raise HTTPException(status_code=404, detail="Bus stop not found")
+        raise HTTPException(status_code=404, detail="Ponto de ônibus não encontrado")
     return bus_stop
 
 @router.put("/{bus_stop_id}", response_model=schemas.BusStop)
 def update_bus_stop(bus_stop_id: int, bus_stop: schemas.BusStopUpdate, db: Session = Depends(get_db)):
     db_bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id, BusStopModel.system_deleted == 0).first()
     if not db_bus_stop:
-        raise HTTPException(status_code=404, detail="Bus stop not found")
+        raise HTTPException(status_code=404, detail="Ponto de ônibus não encontrado")
     for var, value in vars(bus_stop).items():
         if value is not None:
             setattr(db_bus_stop, var, value)
@@ -184,7 +182,7 @@ def update_bus_stop(bus_stop_id: int, bus_stop: schemas.BusStopUpdate, db: Sessi
 def delete_bus_stop(bus_stop_id: int, db: Session = Depends(get_db)):
     db_bus_stop = db.query(BusStopModel).filter(BusStopModel.id == bus_stop_id).first()
     if not db_bus_stop:
-        raise HTTPException(status_code=404, detail="Bus stop not found")
+        raise HTTPException(status_code=404, detail="Ponto de ônibus não encontrado")
     db_bus_stop.system_deleted = 1
     db.commit()
     return {"ok": True}
@@ -201,7 +199,7 @@ def get_bus_stops_with_faculty_names(db: Session = Depends(get_db)):
     ).all()
 
     if not bus_stops:
-        raise HTTPException(status_code=404, detail="No bus stops found")
+        raise HTTPException(status_code=404, detail="Nenhum ponto de ônibus encontrado")
 
     return [
         {

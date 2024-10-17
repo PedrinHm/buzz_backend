@@ -18,11 +18,9 @@ router = APIRouter(
 
 @router.get("/active_trips", response_model=List[dict])
 def get_active_buses(db: Session = Depends(get_db)):
-    # Alias para evitar ambiguidades
     trip_alias = aliased(TripModel)
     student_trip_alias = aliased(StudentTripModel)
 
-    # Consulta para obter os ônibus com viagens ativas
     active_buses = (
         db.query(
             BusModel.id.label("bus_id"),
@@ -31,7 +29,7 @@ def get_active_buses(db: Session = Depends(get_db)):
             BusModel.capacity,
             trip_alias.id.label("trip_id"),
             trip_alias.trip_type,
-            func.count(student_trip_alias.id).label("occupied_seats")  # Conta os student_trips válidos
+            func.count(student_trip_alias.id).label("occupied_seats")  
         )
         .select_from(BusModel)  
         .join(trip_alias, BusModel.id == trip_alias.bus_id)  
@@ -58,7 +56,7 @@ def get_active_buses(db: Session = Depends(get_db)):
     )
 
     if not active_buses:
-        raise HTTPException(status_code=404, detail="No active buses found")
+        raise HTTPException(status_code=404, detail="Nenhum ônibus ativo encontrado")
 
     return [
         {
@@ -85,12 +83,12 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
 
     if not current_trip:
         print("Nenhuma viagem encontrada para o aluno.")
-        raise HTTPException(status_code=404, detail="Student trip not found")
+        raise HTTPException(status_code=404, detail="Nenhuma viagem encontrada para o aluno.")
     
     # Verificar se a trip associada ao aluno é válida
     if not current_trip.trip:
-        print("Nenhuma viagem associada ao StudentTrip.")
-        raise HTTPException(status_code=404, detail="Student's associated trip not found")
+        print("Nenhuma viagem associada ao estudante.")
+        raise HTTPException(status_code=404, detail="Nenhuma viagem associada ao estudante.")
 
     # Alias para evitar ambiguidades
     trip_alias = aliased(TripModel)
@@ -133,7 +131,7 @@ def get_available_buses_for_student(student_id: int = Query(...), db: Session = 
     
     if not active_buses:
         print("Nenhum ônibus ativo encontrado.")
-        raise HTTPException(status_code=404, detail="No active buses found")
+        raise HTTPException(status_code=404, detail="Nenhum ônibus ativo encontrado")
 
     return [
         {
@@ -237,4 +235,3 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
 
 from sqlalchemy import func  # Certifique-se de que func está importado corretamente
 from sqlalchemy.orm import aliased  # Para criar alias se necessário
-

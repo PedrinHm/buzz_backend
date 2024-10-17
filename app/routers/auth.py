@@ -98,25 +98,24 @@ async def login(login_data: LoginData, db: Session = Depends(get_db)):
     login_attempts[email] = [ts for ts in login_attempts.get(email, []) if now - ts < attempt_window]
 
     if len(login_attempts.get(email, [])) >= max_attempts:
-        raise HTTPException(status_code=403, detail="Too many login attempts. Please try again in 15 minutes.")
+        raise HTTPException(status_code=403, detail="Espere 15 minutos e tente novamente.")
 
     user = db.query(User).filter(User.email == login_data.email).first()
     if user:
         if user.verify_password(login_data.password):
-            login_attempts[email] = []  # Resetar tentativas após login bem-sucedido
-            
-            # Verificar se é o primeiro login
+            login_attempts[email] = []  
+
             if user.first_login == "true":
-                # Retornar um valor de user_type_id válido para atender ao LoginResponse
+                
                 return {"status": "first_login", "user_type_id": user.user_type_id, "id": user.id}
             
             return {"status": "success", "user_type_id": user.user_type_id, "id": user.id}
         else:
             login_attempts.setdefault(email, []).append(now)
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            raise HTTPException(status_code=401, detail="Sem autorização")
     else:
         login_attempts.setdefault(email, []).append(now)
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail="Sem autorização")
 
 @router.post("/forgot-password")
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -124,7 +123,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     user = db.query(User).filter(User.cpf == request.cpf, User.system_deleted == 0).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
     # Gera um token de redefinição de senha
     reset_token = secrets.token_urlsafe(32)
@@ -136,7 +135,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     # Envia o e-mail de redefinição de senha
     send_reset_password_email(user.email, reset_token)
 
-    return {"message": "An email has been sent with instructions to reset your password."}
+    return {"message": "Um email foi enviado com as orientações para a troca de senha"}
 
 @router.post("/reset-password")
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
@@ -144,21 +143,21 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     user = db.query(User).filter(User.reset_token == request.token).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="Invalid or expired token")
+        raise HTTPException(status_code=404, detail="Token inválido ou expirado")
 
     # Atualiza a senha do usuário
     user.set_password(request.new_password)
     user.reset_token = None  # Limpa o token após o uso
     db.commit()
 
-    return {"message": "Your password has been reset successfully."}
+    return {"message": "Senha redefinida com sucesso."}
 
 @router.put("/update-device-token")
 async def update_device_token(request: UpdateDeviceTokenRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == request.user_id).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
     user.device_token = request.device_token
     db.commit()
@@ -170,7 +169,7 @@ async def set_new_password(request: SetNewPasswordRequest, db: Session = Depends
     user = db.query(User).filter(User.id == request.user_id).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
     # Atualiza a senha do usuário
     user.set_password(request.new_password)

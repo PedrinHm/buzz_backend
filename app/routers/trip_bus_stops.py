@@ -18,23 +18,23 @@ def update_trip_bus_stop_status(trip_bus_stop_id: int, trip_bus_stop: TripBusSto
         TripBusStopModel.system_deleted == 0
     ).first()
     if not db_trip_bus_stop:
-        raise HTTPException(status_code=404, detail="Trip Bus Stop not found or has been deleted")
+        raise HTTPException(status_code=404, detail="Parada de ônibus da viagem não encontrada ou foi excluída")
 
     # Validações de status
     if db_trip_bus_stop.status == TripBusStopStatusEnum.A_CAMINHO:
         if trip_bus_stop.status not in [TripBusStopStatusEnum.NO_PONTO, TripBusStopStatusEnum.PROXIMO_PONTO, TripBusStopStatusEnum.ONIBUS_COM_PROBLEMA]:
-            raise HTTPException(status_code=400, detail="Invalid status transition")
+            raise HTTPException(status_code=400, detail="Transição de status inválida")
     elif db_trip_bus_stop.status == TripBusStopStatusEnum.NO_PONTO:
         if trip_bus_stop.status not in [TripBusStopStatusEnum.JA_PASSOU, TripBusStopStatusEnum.ONIBUS_COM_PROBLEMA]:
-            raise HTTPException(status_code=400, detail="Invalid status transition")
+            raise HTTPException(status_code=400, detail="Transição de status inválida")
     elif db_trip_bus_stop.status == TripBusStopStatusEnum.PROXIMO_PONTO:
         if trip_bus_stop.status not in [TripBusStopStatusEnum.NO_PONTO, TripBusStopStatusEnum.ONIBUS_COM_PROBLEMA]:
-            raise HTTPException(status_code=400, detail="Invalid status transition")
+            raise HTTPException(status_code=400, detail="Transição de status inválida")
     elif db_trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
-        raise HTTPException(status_code=400, detail="Status cannot be changed from JA_PASSOU")
+        raise HTTPException(status_code=400, detail="O status não pode ser alterado de JA_PASSOU")
     elif db_trip_bus_stop.status == TripBusStopStatusEnum.ONIBUS_COM_PROBLEMA:
         if trip_bus_stop.status not in [TripBusStopStatusEnum.A_CAMINHO, TripBusStopStatusEnum.NO_PONTO, TripBusStopStatusEnum.PROXIMO_PONTO, TripBusStopStatusEnum.JA_PASSOU]:
-            raise HTTPException(status_code=400, detail="Invalid status transition")
+            raise HTTPException(status_code=400, detail="Transição de status inválida")
 
     # Verificação de status dos alunos antes de atualizar o status do ponto de ônibus
     if trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
@@ -44,7 +44,7 @@ def update_trip_bus_stop_status(trip_bus_stop_id: int, trip_bus_stop: TripBusSto
         ).all()
         for student in students:
             if student.status in (StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.EM_AULA):
-                raise HTTPException(status_code=400, detail="Not all students have boarded the bus")
+                raise HTTPException(status_code=400, detail="Nem todos os alunos embarcaram no ônibus")
 
     db_trip_bus_stop.status = trip_bus_stop.status
     db.commit()
@@ -63,17 +63,17 @@ def read_trip_bus_stop(trip_bus_stop_id: int, db: Session = Depends(get_db)):
         TripBusStopModel.system_deleted == 0
     ).first()
     if not trip_bus_stop:
-        raise HTTPException(status_code=404, detail="Trip Bus Stop not found or has been deleted")
+        raise HTTPException(status_code=404, detail="Parada de ônibus da viagem não encontrada ou foi excluída")
     return trip_bus_stop
 
 @router.delete("/{trip_bus_stop_id}", response_model=dict)
 def delete_trip_bus_stop(trip_bus_stop_id: int, db: Session = Depends(get_db)):
     trip_bus_stop = db.query(TripBusStopModel).filter(TripBusStopModel.id == trip_bus_stop_id).first()
     if not trip_bus_stop:
-        raise HTTPException(status_code=404, detail="Trip Bus Stop not found")
+        raise HTTPException(status_code=404, detail="Parada de ônibus da viagem não encontrada")
     trip_bus_stop.system_deleted = 1
     db.commit()
-    return {"status": "deleted"}
+    return {"status": "excluído"}
 
 @router.put("/update_next_bus_stop/{trip_id}", response_model=TripBusStop)
 def update_next_to_at_stop(trip_id: int, db: Session = Depends(get_db)):
@@ -85,7 +85,7 @@ def update_next_to_at_stop(trip_id: int, db: Session = Depends(get_db)):
     ).first()
 
     if not db_trip_bus_stop:
-        raise HTTPException(status_code=404, detail="No bus stop with status 'Próximo ponto' found for this trip")
+        raise HTTPException(status_code=404, detail="Nenhuma parada de ônibus com status 'Próximo ponto' encontrada para esta viagem")
 
     # Atualize o status para "No ponto"
     db_trip_bus_stop.status = TripBusStopStatusEnum.NO_PONTO
@@ -113,7 +113,7 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
         ).all()
 
         if students_in_current_stop:
-            raise HTTPException(status_code=400, detail="Cannot proceed to the next stop while students are still waiting at the current stop")
+            raise HTTPException(status_code=400, detail="Não é possível prosseguir para a próxima parada enquanto há alunos aguardando na parada atual")
 
         # Definir o status do ponto atual como "Já passou"
         current_stop.status = TripBusStopStatusEnum.JA_PASSOU
@@ -127,7 +127,7 @@ def select_next_stop(trip_id: int, new_stop_id: int, db: Session = Depends(get_d
     ).first()
 
     if not new_stop:
-        raise HTTPException(status_code=404, detail="New bus stop not found")
+        raise HTTPException(status_code=404, detail="Nova parada de ônibus não encontrada")
 
     new_stop.status = TripBusStopStatusEnum.PROXIMO_PONTO
     db.commit()
@@ -160,7 +160,7 @@ def get_stops_on_the_way(trip_id: int, db: Session = Depends(get_db)):
     ).distinct().all()  # Usando distinct() para evitar duplicatas
 
     if not stops_on_the_way:
-        raise HTTPException(status_code=404, detail="No stops on the way found")
+        raise HTTPException(status_code=404, detail="Nenhuma parada no caminho encontrada")
 
     # Transformando o resultado para incluir o nome do ponto de ônibus
     result = [
@@ -186,7 +186,7 @@ def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
     ).first()
 
     if not current_stop:
-        raise HTTPException(status_code=404, detail="No bus stop with status 'No ponto' found")
+        raise HTTPException(status_code=404, detail="Nenhuma parada de ônibus com status 'No ponto' encontrada")
 
     # Verificar se há alunos com status "Em aula" ou "Aguardando no ponto" no ponto atual
     students_in_current_stop = db.query(StudentTripModel).filter(
@@ -197,7 +197,7 @@ def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
 
     if students_in_current_stop:
         print(f"Alunos aguardando ou em aula: {students_in_current_stop}")
-        raise HTTPException(status_code=400, detail="Cannot finalize the stop while students are still waiting at the current stop")
+        raise HTTPException(status_code=400, detail="Não é possível finalizar a parada enquanto há alunos aguardando na parada atual")
 
     # Definir o status do ponto atual como "Já passou"
     current_stop.status = TripBusStopStatusEnum.JA_PASSOU
@@ -205,4 +205,3 @@ def finalize_current_stop(trip_id: int, db: Session = Depends(get_db)):
     db.refresh(current_stop)
 
     return current_stop
-

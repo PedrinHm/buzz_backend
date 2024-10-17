@@ -15,7 +15,7 @@ def create_faculty(faculty: faculty_schema.FacultyCreate, db: Session = Depends(
     # Verifica se já existe uma faculdade com o mesmo nome que não esteja deletada
     existing_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.name == faculty.name, faculty_model.Faculty.system_deleted == 0).first()
     if existing_faculty:
-        raise HTTPException(status_code=400, detail="Faculty with this name already exists")
+        raise HTTPException(status_code=400, detail="Já existe uma faculdade com este nome")
 
     db_faculty = faculty_model.Faculty(name=faculty.name)
     db.add(db_faculty)
@@ -32,19 +32,19 @@ def read_faculties(skip: int = 0, limit: int = 1000, db: Session = Depends(get_d
 def read_faculty(faculty_id: int, db: Session = Depends(get_db)):
     faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.id == faculty_id, faculty_model.Faculty.system_deleted == 0).first()
     if faculty is None:
-        raise HTTPException(status_code=404, detail="Faculty not found")
+        raise HTTPException(status_code=404, detail="Faculdade não encontrada")
     return faculty
 
 @router.put("/{faculty_id}", response_model=faculty_schema.Faculty)
 def update_faculty(faculty_id: int, faculty: faculty_schema.FacultyCreate, db: Session = Depends(get_db)):
     db_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.id == faculty_id).first()
     if db_faculty is None:
-        raise HTTPException(status_code=404, detail="Faculty not found")
+        raise HTTPException(status_code=404, detail="Faculdade não encontrada")
     
     # Verifica se já existe uma faculdade com o mesmo nome (exceto a que está sendo atualizada) que não esteja deletada
     existing_faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.name == faculty.name, faculty_model.Faculty.id != faculty_id, faculty_model.Faculty.system_deleted == 0).first()
     if existing_faculty:
-        raise HTTPException(status_code=400, detail="Faculty with this name already exists")
+        raise HTTPException(status_code=400, detail="Já existe uma faculdade com este nome")
     
     db_faculty.name = faculty.name
     db.commit()
@@ -55,17 +55,17 @@ def update_faculty(faculty_id: int, faculty: faculty_schema.FacultyCreate, db: S
 def delete_faculty(faculty_id: int, db: Session = Depends(get_db)):
     faculty = db.query(faculty_model.Faculty).filter(faculty_model.Faculty.id == faculty_id).first()
     if faculty is None:
-        raise HTTPException(status_code=404, detail="Faculty not found")
+        raise HTTPException(status_code=404, detail="Faculdade não encontrada")
     
     # Verifica se há pontos de ônibus vinculados a esta faculdade
     bus_stops = db.query(bus_stop_model.BusStop).filter(bus_stop_model.BusStop.faculty_id == faculty_id, bus_stop_model.BusStop.system_deleted == 0).all()
     if bus_stops:
-        raise HTTPException(status_code=400, detail="Cannot delete faculty with linked bus stops")
+        raise HTTPException(status_code=400, detail="Não é possível excluir a faculdade com pontos de ônibus vinculados")
     
     # Verifica se há alunos vinculados a esta faculdade
     students = db.query(user_model.User).filter(user_model.User.faculty_id == faculty_id, user_model.User.system_deleted == 0).all()
     if students:
-        raise HTTPException(status_code=400, detail="Cannot delete faculty with linked students")
+        raise HTTPException(status_code=400, detail="Não é possível excluir a faculdade com alunos vinculados")
     
     faculty.system_deleted = 1
     db.commit()

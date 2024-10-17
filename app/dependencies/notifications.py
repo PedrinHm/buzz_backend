@@ -37,4 +37,4 @@ async def send_push_notification(token: str, title: str, body: str):
         response = messaging.send(message)
         return {"success": True, "message_id": response}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send notification: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Falha ao enviar notificação: {str(e)}")
