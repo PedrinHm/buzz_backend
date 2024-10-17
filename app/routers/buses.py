@@ -180,7 +180,7 @@ def delete_bus(bus_id: int, db: Session = Depends(get_db)):
 from sqlalchemy import func  # Certifique-se de que func está importado corretamente
 from sqlalchemy.orm import aliased  # Para criar alias se necessário
 
-@router.get("/trips/active_trips", response_model=List[dict])
+@router.get("/active_trips", response_model=List[dict])
 def get_active_buses(db: Session = Depends(get_db)):
     # Alias para evitar ambiguidades
     trip_alias = aliased(TripModel)
