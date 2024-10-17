@@ -14,7 +14,7 @@ class User(Base):
     cpf = Column(String, unique=True)
     phone = Column(String, unique=True)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
-    first_login = Column(String, default="false")
+    first_login = Column(String, default="true")
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
     profile_picture = Column(String)  
     reset_token = Column(String, nullable=True)
