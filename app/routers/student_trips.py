@@ -268,15 +268,6 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
     if not student_trip:
         raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
 
-    # Verifica o status do ponto de ônibus atual
-    current_trip_bus_stop = db.query(TripBusStopModel).filter(
-        TripBusStopModel.trip_id == student_trip.trip_id,
-        TripBusStopModel.bus_stop_id == student_trip.point_id
-    ).first()
-
-    if current_trip_bus_stop and current_trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
-        raise HTTPException(status_code=400, detail="Não é possível trocar de viagem. O ponto de ônibus atual já passou.")
-
     # Busca pela nova trip_id
     new_trip = db.query(TripModel).filter(TripModel.id == new_trip_id).first()
     if not new_trip:
@@ -284,6 +275,15 @@ def update_student_trip(student_trip_id: int, new_trip_id: int, db: Session = De
 
     if new_trip.status != TripStatusEnum.ATIVA:
         raise HTTPException(status_code=400, detail="Nova viagem não está ativa")
+
+    # Verifica o status do ponto de ônibus na nova viagem
+    new_trip_bus_stop = db.query(TripBusStopModel).filter(
+        TripBusStopModel.trip_id == new_trip_id,
+        TripBusStopModel.bus_stop_id == student_trip.point_id
+    ).first()
+
+    if new_trip_bus_stop and new_trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
+        raise HTTPException(status_code=400, detail="Não é possível trocar para esta viagem. O ponto de ônibus já passou.")
 
     # Verifica a capacidade e trata a lógica da fila de espera
     if not check_capacity(new_trip.id, db):
@@ -381,6 +381,7 @@ def validate_and_update_trip_bus_stop(student_trip: StudentTripModel, db: Sessio
         print("Mais de uma viagem correspondente encontrada ou o ID de referência não corresponde.")
 
     return
+
 
 
 
