@@ -29,7 +29,8 @@ async def update_student_trip_status(student_trip_id: int, new_status: StudentSt
         StudentStatusEnum.EM_AULA: [StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.PRESENTE],
         StudentStatusEnum.AGUARDANDO_NO_PONTO: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.NAO_VOLTARA],
         StudentStatusEnum.NAO_VOLTARA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO],
-        StudentStatusEnum.FILA_DE_ESPERA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA]
+        StudentStatusEnum.FILA_DE_ESPERA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA],
+        StudentStatusEnum.PRESENTE: [StudentStatusEnum.NAO_VOLTARA]
     }
 
     # Verifica se a transição é permitida
