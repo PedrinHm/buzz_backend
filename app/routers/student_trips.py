@@ -68,7 +68,7 @@ async def update_student_trip_status(
         if trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
             raise HTTPException(
                 status_code=400,
-                detail="Não é possível fazer a transição de status. O ponto de ônibus já passou."
+                detail="O seu ponto de ônibus já passou, defina outro para poder participar da viagem."
             )
 
     # Verifica a capacidade do ônibus se a transição for de NAO_VOLTARA ou FILA_DE_ESPERA para outro status
