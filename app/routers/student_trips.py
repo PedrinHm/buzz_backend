@@ -334,6 +334,7 @@ async def get_active_trip(student_id: int, db: Session = Depends(get_db)):
         .options(joinedload(StudentTripModel.trip))\
         .filter(
             StudentTripModel.student_id == student_id,
+            StudentTripModel.system_deleted == 0
             TripModel.status == TripStatusEnum.ATIVA
         )\
         .first()
