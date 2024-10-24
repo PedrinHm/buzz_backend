@@ -39,19 +39,21 @@ def get_bus_stops_for_trip(
 
     selected_bus_stop_id = student_trip.point_id if student_trip else None
 
-      # Consulta para buscar todos os pontos de ônibus vinculados à faculdade
+    # Consulta para buscar todos os pontos de ônibus vinculados à faculdade
     # Exclui pontos de ônibus com status "já passou"
-    base_query = db.query(BusStopModel, FacultyModel).join(FacultyModel, BusStopModel.faculty_id == FacultyModel.id).filter(
+    base_query = db.query(BusStopModel, FacultyModel).join(
+        FacultyModel, BusStopModel.faculty_id == FacultyModel.id
+    ).filter(
         BusStopModel.system_deleted == 0,
         FacultyModel.system_deleted == 0,
         BusStopModel.id != selected_bus_stop_id,  # Exclui o ponto de ônibus vinculado ao aluno
-        ~BusStopModel.id.in_(db.query(TripBusStopModel.bus_stop_id).filter(
-            TripBusStopModel.trip_id == trip.id,
-            TripBusStopModel.status == TripBusStopStatusEnum.JA_PASSOU.value,
-            TripBusStopModel.system_deleted == 0
-        ))  # Exclui os pontos de ônibus que já passaram
+        ~BusStopModel.id.in_(
+            db.query(TripBusStopModel.bus_stop_id).filter(
+                TripBusStopModel.trip_id == trip.id,
+                TripBusStopModel.status == TripBusStopStatusEnum.JA_PASSOU.value,
+            )
+        )  # Exclui os pontos de ônibus que já passaram
     )
-
 
     # Verifica o tipo de viagem
     if trip.trip_type == TripTypeEnum.VOLTA:
@@ -104,18 +106,6 @@ def get_bus_stops_for_trip(
         ]
     else:
         raise HTTPException(status_code=400, detail="Tipo de viagem inválido. Use 'ida' ou 'volta'.")
-
-    # Adiciona lógica para status "A caminho" para pontos não vinculados à viagem na viagem de volta
-    if trip.trip_type == TripTypeEnum.VOLTA:
-        bus_stops = base_query.all()  # Recupera todos os pontos de ônibus
-        result = [
-            {
-                "id": bus_stop.id,
-                "name": f"{bus_stop.name} - {faculty.name}",
-                "status": TripBusStopStatusEnum(trip_bus_stop_status.get(bus_stop.id, TripBusStopStatusEnum.A_CAMINHO.value)).label()
-            }
-            for bus_stop, faculty in bus_stops
-        ]
 
     if not result:
         raise HTTPException(status_code=404, detail="Nenhum ponto de ônibus encontrado")
