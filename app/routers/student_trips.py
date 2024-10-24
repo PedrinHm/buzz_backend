@@ -17,7 +17,11 @@ router = APIRouter(
 )
 
 @router.put("/{student_trip_id}/update_status", response_model=StudentTrip)
-async def update_student_trip_status(student_trip_id: int, new_status: StudentStatusEnum, db: Session = Depends(get_db)):
+async def update_student_trip_status(
+    student_trip_id: int,
+    new_status: StudentStatusEnum,
+    db: Session = Depends(get_db)
+):
     student_trip = db.query(StudentTripModel).filter(StudentTripModel.id == student_trip_id).first()
     if not student_trip:
         raise HTTPException(status_code=404, detail="Viagem do estudante não encontrada")
@@ -26,16 +30,46 @@ async def update_student_trip_status(student_trip_id: int, new_status: StudentSt
 
     # Define as transições permitidas
     allowed_transitions = {
-        StudentStatusEnum.EM_AULA: [StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.PRESENTE],
-        StudentStatusEnum.AGUARDANDO_NO_PONTO: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.NAO_VOLTARA],
-        StudentStatusEnum.NAO_VOLTARA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO],
-        StudentStatusEnum.FILA_DE_ESPERA: [StudentStatusEnum.PRESENTE, StudentStatusEnum.EM_AULA, StudentStatusEnum.AGUARDANDO_NO_PONTO, StudentStatusEnum.NAO_VOLTARA],
+        StudentStatusEnum.EM_AULA: [
+            StudentStatusEnum.AGUARDANDO_NO_PONTO,
+            StudentStatusEnum.NAO_VOLTARA,
+            StudentStatusEnum.PRESENTE
+        ],
+        StudentStatusEnum.AGUARDANDO_NO_PONTO: [
+            StudentStatusEnum.PRESENTE,
+            StudentStatusEnum.EM_AULA,
+            StudentStatusEnum.NAO_VOLTARA
+        ],
+        StudentStatusEnum.NAO_VOLTARA: [
+            StudentStatusEnum.PRESENTE,
+            StudentStatusEnum.EM_AULA,
+            StudentStatusEnum.AGUARDANDO_NO_PONTO
+        ],
+        StudentStatusEnum.FILA_DE_ESPERA: [
+            StudentStatusEnum.PRESENTE,
+            StudentStatusEnum.EM_AULA,
+            StudentStatusEnum.AGUARDANDO_NO_PONTO,
+            StudentStatusEnum.NAO_VOLTARA
+        ],
         StudentStatusEnum.PRESENTE: [StudentStatusEnum.NAO_VOLTARA]
     }
 
     # Verifica se a transição é permitida
     if new_status not in allowed_transitions.get(current_status, []):
         raise HTTPException(status_code=400, detail="Transição de status não permitida")
+
+    # Verifica o status do ponto de ônibus se a transição for de FILA_DE_ESPERA para outro status
+    if current_status == StudentStatusEnum.FILA_DE_ESPERA and new_status != current_status:
+        trip_bus_stop = db.query(TripBusStopModel).filter(
+            TripBusStopModel.trip_id == student_trip.trip_id,
+            TripBusStopModel.bus_stop_id == student_trip.point_id
+        ).first()
+
+        if trip_bus_stop and trip_bus_stop.status == TripBusStopStatusEnum.JA_PASSOU:
+            raise HTTPException(
+                status_code=400,
+                detail="Não é possível fazer a transição de status. O ponto de ônibus já passou."
+            )
 
     # Verifica a capacidade do ônibus se a transição for de NAO_VOLTARA ou FILA_DE_ESPERA para outro status
     if current_status in [StudentStatusEnum.NAO_VOLTARA, StudentStatusEnum.FILA_DE_ESPERA] and new_status != current_status:
@@ -383,6 +417,7 @@ def validate_and_update_trip_bus_stop(student_trip: StudentTripModel, db: Sessio
         print("Mais de uma viagem correspondente encontrada ou o ID de referência não corresponde.")
 
     return
+
 
 
 
