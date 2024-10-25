@@ -14,6 +14,24 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Verifica se o email é válido
+    try:
+        schemas.UserCreate(email=user.email)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="E-mail inválido")
+
+    # Verifica se o telefone é válido
+    try:
+        schemas.UserCreate(phone=user.phone)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Número de telefone inválido")
+
+    # Verifica se o CPF é válido
+    try:
+        schemas.UserCreate(cpf=user.cpf)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="CPF inválido")
+
     db_user = db.query(UserModel).filter(
         ((UserModel.email == user.email) | 
          (UserModel.phone == user.phone) | 
