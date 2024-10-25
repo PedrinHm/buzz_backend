@@ -33,16 +33,16 @@ class UserBase(BaseModel):
             try:
                 phone_number = phonenumbers.parse(v, "BR")
                 if not phonenumbers.is_valid_number(phone_number):
-                    raise ValueError("Invalid phone number")
+                    raise ValueError("Número de telefone inválido")
             except phonenumbers.phonenumberutil.NumberParseException:
-                raise ValueError("Invalid phone number format")
+                raise ValueError("Formato de número de telefone inválido")
         return v
 
     # Validador de CPF
     @field_validator('cpf')
     def validate_cpf(cls, v):
         if v and not validate_cpf(v):
-            raise ValueError("Invalid CPF")
+            raise ValueError("CPF inválido")
         return v
 
 # Modelo para criação de um usuário
@@ -70,16 +70,16 @@ class UserUpdate(BaseModel):
             try:
                 phone_number = phonenumbers.parse(v, "BR")
                 if not phonenumbers.is_valid_number(phone_number):
-                    raise ValueError("Invalid phone number")
+                    raise ValueError("Número de telefone inválido")
             except phonenumbers.phonenumberutil.NumberParseException:
-                raise ValueError("Invalid phone number format")
+                raise ValueError("Formato de número de telefone inválido")
         return v
 
     # Validador de CPF para atualização
     @field_validator('cpf', check_fields=False)
     def validate_cpf(cls, v):
         if v and not validate_cpf(v):
-            raise ValueError("Invalid CPF")
+            raise ValueError("CPF inválido")
         return v
 
 # Modelo para foto de perfil do usuário
