@@ -57,7 +57,6 @@ Equipe Buzz"""
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(
         ((UserModel.email == user.email) | 
-         (UserModel.phone == user.phone) | 
          (UserModel.cpf == user.cpf))
     ).first()
     
@@ -65,8 +64,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         if db_user.system_deleted == 0:
             if db_user.email == user.email:
                 raise HTTPException(status_code=400, detail="E-mail já cadastrado")
-            if db_user.phone == user.phone:
-                raise HTTPException(status_code=400, detail="Número de telefone já cadastrado")
             if db_user.cpf == user.cpf:
                 raise HTTPException(status_code=400, detail="CPF já cadastrado")
         else:

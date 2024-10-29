@@ -12,7 +12,7 @@ class User(Base):
     name = Column(String)
     email = Column(String, unique=True, index=True)
     cpf = Column(String, unique=True)
-    phone = Column(String, unique=True)
+    phone = Column(String)
     user_type_id = Column(Integer, ForeignKey('user_types.id'))
     first_login = Column(String, default="true")
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
