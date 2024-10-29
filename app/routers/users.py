@@ -6,11 +6,52 @@ from typing import List
 from ..models.user import User as UserModel
 from ..schemas.user import User, UserCreate, UserUpdate, UserProfilePicture
 from ..schemas import User as UserSchema
+from smtplib import SMTP
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv 
+import os
+
+load_dotenv()
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
+
+def send_welcome_email(recipient_email: str, user_type: str):
+    smtp_server = os.getenv('SMTP_SERVER')
+    smtp_port = int(os.getenv('SMTP_PORT'))
+    smtp_user = os.getenv('SMTP_USER')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+
+    subject = "Bem-vindo ao Sistema"
+    body = f"""Olá,
+
+Seu cadastro como {user_type} foi realizado com sucesso!
+Para seu primeiro acesso, utilize seu CPF como senha.
+
+Após o primeiro login, você será solicitado a alterar sua senha.
+
+Atenciosamente,
+Equipe Buzz"""
+    
+    msg = MIMEMultipart()
+    msg['From'] = smtp_user
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_user, recipient_email, msg.as_string())
+        print("E-mail de boas-vindas enviado com sucesso!")
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+    finally:
+        server.quit()
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -50,12 +91,19 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         phone=user.phone,
         faculty_id=user.faculty_id,
         user_type_id=user.user_type_id,
-        first_login="false"
+        first_login="true"
     )
-    new_user.set_password(user.password)
+    new_user.set_password(user.cpf)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Determinar o tipo de usuário
+    user_type = "Motorista" if user.user_type_id == 2 else "Aluno"
+    
+    # Enviar email de boas-vindas
+    send_welcome_email(user.email, user_type)
+
     return new_user
 
 @router.get("/", response_model=List[schemas.User])
