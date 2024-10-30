@@ -29,7 +29,7 @@ def send_welcome_email(recipient_email: str, user_type: str):
     body = f"""Olá,
 
 Seu cadastro como {user_type} foi realizado com sucesso!
-Para seu primeiro acesso, utilize seu CPF como senha.
+Para seu primeiro acesso, utilize seu e-mail como login e seu CPF como senha.
 
 Após o primeiro login, você será solicitado a alterar sua senha.
 
