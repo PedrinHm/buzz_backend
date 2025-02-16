@@ -110,13 +110,27 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 @router.get("/{user_id}", response_model=UserSchema)
 def read_user(user_id: int, db: Session = Depends(get_db)):
-    # Realiza a consulta para trazer o usuário junto com o nome da faculdade
     user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
 
     if user is None:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    # Verifica se o usuário possui uma faculdade associada e retorna o nome
+    if user.faculty:
+        user.faculty_name = user.faculty.name
+    else:
+        user.faculty_name = None
+        
+    # Removendo a foto de perfil para esta rota
+    user.profile_picture = None
+    return user
+
+@router.get("/{user_id}/with-picture", response_model=UserSchema)
+def read_user_with_picture(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.system_deleted == 0).first()
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
     if user.faculty:
         user.faculty_name = user.faculty.name
     else:
