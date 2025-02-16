@@ -106,6 +106,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = db.query(UserModel).filter(UserModel.system_deleted == 0).offset(skip).limit(limit).all()
+    
+    # Remove a foto de perfil de cada usuário na lista
+    for user in users:
+        user.profile_picture = None
+        
     return users
 
 @router.get("/{user_id}", response_model=UserSchema)
